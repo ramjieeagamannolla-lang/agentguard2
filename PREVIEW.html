@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AgentGuard — UI Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: { extend: {
+    colors: {
+      navy: { 900:'#0B1220', 800:'#111C31', 700:'#182741' },
+      brand: { 50:'#EFF6FF', 100:'#DBEAFE', 300:'#93C5FD', 500:'#2563EB', 600:'#1D4ED8', 700:'#1E40AF' },
+    },
+    boxShadow: { card: '0 1px 2px rgba(16,24,40,.04), 0 4px 16px rgba(16,24,40,.06)' },
+    fontFamily: { sans:['Inter','system-ui','sans-serif'], mono:['JetBrains Mono','monospace'] },
+  }}
+}
+</script>
+<style>
+  :root { color-scheme: light; }
+  body { background:#F8FAFC; }
+  .card { background:#fff; border-radius:.75rem; border:1px solid rgba(226,232,240,.8); box-shadow:0 1px 2px rgba(16,24,40,.04),0 4px 16px rgba(16,24,40,.06); }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:.5rem; padding:.625rem 1rem; font-size:.875rem; font-weight:600; transition:.15s; cursor:pointer; border:0; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .btn-primary { background:#2563EB; color:#fff; } .btn-primary:hover:not(:disabled){ background:#1D4ED8; }
+  .btn-ghost { background:#fff; color:#334155; border:1px solid #CBD5E1; } .btn-ghost:hover:not(:disabled){ background:#F8FAFC; }
+  .btn-success { background:#059669; color:#fff; } .btn-success:hover:not(:disabled){ background:#047857; }
+  .btn-danger { background:#DC2626; color:#fff; } .btn-danger:hover:not(:disabled){ background:#B91C1C; }
+  .btn-sm { padding:.375rem .75rem; font-size:.8125rem; }
+  .input { width:100%; border-radius:.5rem; border:1px solid #CBD5E1; padding:.625rem .875rem; font-size:.875rem; outline:none; transition:.15s; font-family:inherit; }
+  .input:focus { border-color:#2563EB; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+  .th { text-align:left; font-size:.6875rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#64748B; padding:.75rem 1.25rem; }
+  .td { padding:1rem 1.25rem; font-size:.875rem; color:#334155; vertical-align:middle; }
+  :focus-visible { outline:2px solid #2563EB; outline-offset:2px; }
+  @media (prefers-reduced-motion: reduce) { *{ animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+  .spin { animation:sp 1s linear infinite; } @keyframes sp { to { transform:rotate(360deg); } }
+  .pulse-dot { animation:pd 1.4s ease-in-out infinite; } @keyframes pd { 0%,100%{opacity:1} 50%{opacity:.35} }
+  .fade { animation:fd .25s ease-out; } @keyframes fd { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+  table { border-collapse:collapse; }
+</style>
+</head>
+<body class="font-sans text-slate-800">
+
+<div class="flex min-h-screen">
+  <!-- SIDEBAR -->
+  <aside class="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-navy-900 md:flex">
+    <div class="flex items-center gap-3 px-6 py-6">
+      <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500 text-lg">🛡️</div>
+      <div>
+        <p class="text-[15px] font-bold leading-tight text-white">AgentGuard</p>
+        <p class="text-[11px] font-medium text-slate-400">Permission Auditor</p>
+      </div>
+    </div>
+    <nav id="nav" class="mt-2 flex-1 space-y-1 px-3"></nav>
+    <div class="m-3 rounded-xl bg-navy-800 p-4">
+      <p class="text-xs font-semibold text-slate-200">Sandbox mode</p>
+      <p class="mt-1 text-[11px] leading-relaxed text-slate-400">All tools operate on demo data. No production systems are reachable.</p>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="flex min-w-0 flex-1 flex-col">
+    <header class="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <div class="flex items-center justify-between gap-4 px-5 py-4 md:px-8">
+        <div class="min-w-0">
+          <h1 id="pageTitle" class="truncate text-xl font-bold text-slate-900">Dashboard</h1>
+          <p id="pageSub" class="mt-0.5 truncate text-sm text-slate-500"></p>
+        </div>
+        <div class="flex items-center gap-4">
+          <button onclick="go('logs')" class="relative text-xl text-slate-500 hover:text-slate-800" title="Pending approvals">
+            🔔<span id="bell" class="absolute -right-1.5 -top-1 hidden h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white"></span>
+          </button>
+          <div class="flex items-center gap-2.5">
+            <div class="hidden text-right sm:block">
+              <p class="text-sm font-semibold leading-tight text-slate-900">Security Admin</p>
+              <p class="text-xs text-slate-500">admin@acme.io</p>
+            </div>
+            <div class="flex h-9 w-9 items-center justify-center rounded-full bg-navy-800 text-sm font-bold text-white">SA</div>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main id="view" class="flex-1 px-5 py-6 md:px-8 md:py-8"></main>
+  </div>
+</div>
+
+<div id="toast" class="pointer-events-none fixed right-5 top-5 z-50 space-y-2"></div>
+
+<div class="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 rounded-full border border-slate-300 bg-white/95 px-4 py-2 text-xs font-medium text-slate-600 shadow-lg backdrop-blur">
+  Visual preview — mock data in the browser. The real app runs on Express + MongoDB + LangGraph.
+</div>
+
+<script>
+/* ============================== MOCK BACKEND ============================== */
+const TOOLS = [
+  { toolName:'getOrder',    label:'Get Order',     permission:'READ_ORDERS',    risk:'LOW',    type:'READ',        desc:'Look up a single order by its order ID.' },
+  { toolName:'getCustomer', label:'Get Customer',  permission:'READ_CUSTOMER',  risk:'MEDIUM', type:'READ',        desc:'Look up a customer profile by customer ID.' },
+  { toolName:'getInventory',label:'Get Inventory', permission:'READ_INVENTORY', risk:'LOW',    type:'READ',        desc:'Check stock level for a product SKU.' },
+  { toolName:'updateOrder', label:'Update Order',  permission:'WRITE_ORDERS',   risk:'MEDIUM', type:'WRITE',       desc:'Update fields on an existing order.' },
+  { toolName:'deleteOrder', label:'Delete Order',  permission:'DELETE_ORDERS',  risk:'HIGH',   type:'DESTRUCTIVE', desc:'Permanently delete an order record.' },
+  { toolName:'issueRefund', label:'Issue Refund',  permission:'ISSUE_REFUND',   risk:'HIGH',   type:'WRITE',       desc:'Issue a monetary refund against an order.' },
+  { toolName:'getPayroll',  label:'Get Payroll',   permission:'READ_PAYROLL',   risk:'HIGH',   type:'READ',        desc:'Read employee salary and bank details.' },
+];
+const PERMS = {
+  READ_ORDERS:{type:'READ',sens:'INTERNAL',risk:'LOW',desc:'Read order records: status, items, shipping and delivery dates.'},
+  READ_CUSTOMER:{type:'READ',sens:'PII',risk:'MEDIUM',desc:'Read customer profiles including name, email and address.'},
+  READ_INVENTORY:{type:'READ',sens:'INTERNAL',risk:'LOW',desc:'Read stock levels and warehouse availability.'},
+  WRITE_ORDERS:{type:'WRITE',sens:'INTERNAL',risk:'MEDIUM',desc:'Modify existing order records.'},
+  DELETE_ORDERS:{type:'DESTRUCTIVE',sens:'INTERNAL',risk:'HIGH',desc:'Permanently delete order records. Irreversible.'},
+  ISSUE_REFUND:{type:'WRITE',sens:'FINANCIAL',risk:'HIGH',desc:'Move money back to a customer.'},
+  READ_PAYROLL:{type:'READ',sens:'HIGHLY_SENSITIVE',risk:'HIGH',desc:'Read employee salary, bank and compensation data.'},
+};
+const permOf = n => TOOLS.find(t=>t.toolName===n)?.permission;
+const toolFor = p => TOOLS.find(t=>t.permission===p);
+
+const ORDERS = {
+  '1024':{orderId:'1024',customerId:'C-100',status:'Shipped',expectedDelivery:'Tomorrow',total:249,items:[{name:'Noise Cancelling Headphones',qty:1}]},
+  '1025':{orderId:'1025',customerId:'C-101',status:'Processing',expectedDelivery:'In 4 days',total:258,items:[{name:'Mechanical Keyboard',qty:2}]},
+  '1026':{orderId:'1026',customerId:'C-102',status:'Delivered',expectedDelivery:'Delivered 3 days ago',total:399,items:[{name:'27" 4K Monitor',qty:1}]},
+  '1027':{orderId:'1027',customerId:'C-100',status:'Cancelled',expectedDelivery:'N/A',total:129,items:[{name:'Mechanical Keyboard',qty:1}]},
+};
+const CUSTOMERS = {'C-100':{name:'John Mathews',email:'john.m@example.com',tier:'Gold'},'C-101':{name:'Priya Nair',email:'priya.n@example.com',tier:'Silver'},'C-102':{name:'Diego Ramirez',email:'diego.r@example.com',tier:'Bronze'}};
+const EMPLOYEES = {'E-01':{name:'Sarah Chen',role:'Engineering Manager',salary:168000,bankAccount:'XXXX-XXXX-4412'}};
+
+let uid = 1;
+const now = () => new Date().toISOString();
+const DB = { agents:[], audits:[] };
+
+function seedAgent(name, task, tools, risk='UNKNOWN', status='UNAUDITED'){
+  const perms=[...new Set(tools.map(permOf))];
+  DB.agents.push({ _id:'a'+(uid++), name, task, tools, grantedPermissions:perms, originalPermissions:perms, riskLevel:risk, status, createdAt:now(), toolLogs:[] });
+}
+seedAgent('Customer Support Agent','Answer customer questions about orders, shipping and delivery.',['getOrder','getCustomer','updateOrder','deleteOrder','getPayroll']);
+seedAgent('HR Assistant','Help employees find information about their payroll and compensation.',['getPayroll','getCustomer'],'MEDIUM','UNAUDITED');
+seedAgent('Inventory Assistant','Report current stock levels for products to the warehouse team.',['getInventory'],'LOW','SECURED');
+
+const getAgent = id => DB.agents.find(a=>a._id===id);
+const getAudit = id => DB.audits.find(a=>a._id===id);
+const activeTools = a => a.tools.filter(t=>a.grantedPermissions.includes(permOf(t)));
+
+/* Mock of the LangGraph audit: task keywords → required permissions */
+function analyzeTask(task){
+  const t = task.toLowerCase(); const req = new Set();
+  if (/order|shipping|delivery|track|purchase/.test(t)) req.add('READ_ORDERS');
+  if (/customer|client|account|order/.test(t)) req.add('READ_CUSTOMER');
+  if (/payroll|salary|compensation|employee/.test(t)) req.add('READ_PAYROLL');
+  if (/stock|inventory|warehouse/.test(t)) req.add('READ_INVENTORY');
+  if (/update|modify|change|edit/.test(t)) req.add('WRITE_ORDERS');
+  if (/refund|reimburse/.test(t)) req.add('ISSUE_REFUND');
+  return [...req];
+}
+const RISK_COPY = {
+  WRITE_ORDERS:'The stated task is informational. Write access lets a prompt-injected or mistaken agent silently alter order state — changing shipping addresses or marking orders delivered — with no human in the loop.',
+  DELETE_ORDERS:'Destructive and irreversible. A single confused tool call can erase records the business cannot recover, and nothing in the stated task requires deletion.',
+  READ_PAYROLL:'Payroll exposes salary and bank details for every employee. A customer-facing agent is reachable by untrusted input, so this is a direct path from an external message to highly sensitive internal data.',
+  ISSUE_REFUND:'Directly moves money. An agent that can be talked into a refund is a financial loss channel.',
+  READ_CUSTOMER:'Customer PII beyond what the task needs widens the data exposed if the agent is manipulated.',
+  READ_INVENTORY:'Low sensitivity, but still outside the scope the task describes.',
+};
+function runAuditNow(agent){
+  const required = analyzeTask(agent.task);
+  const actual = agent.grantedPermissions;
+  const excessive = actual.filter(p=>!required.includes(p));
+  const missing = required.filter(p=>!actual.includes(p));
+  let riskLevel = 'LOW';
+  if (excessive.some(p=>PERMS[p].type==='DESTRUCTIVE' || ['HIGHLY_SENSITIVE','FINANCIAL'].includes(PERMS[p].sens))) riskLevel='HIGH';
+  else if (excessive.length) riskLevel='MEDIUM';
+  const audit = {
+    _id:'d'+(uid++), agentId:agent._id, agentName:agent.name, task:agent.task,
+    originalPermissions:[...actual], requiredPermissions:required, excessivePermissions:excessive, missingPermissions:missing,
+    taskAnalysis:`The task describes ${required.length? 'reading '+required.map(p=>p.replace('READ_','').replace('_',' ').toLowerCase()).join(' and ')+' data' : 'no data access'}. It is phrased as answering and reporting, not as modifying records, so no write or destructive scope is implied.`,
+    auditSummary: excessive.length ? `${excessive.length} of ${actual.length} granted permissions are not needed for the stated task.` : 'Granted scope already matches the task.',
+    riskLevel,
+    riskReasons: excessive.map(p=>({permission:p, severity:PERMS[p].risk, reason:RISK_COPY[p]||'Not required by the stated task.'})),
+    recommendations:{
+      keep: actual.filter(p=>required.includes(p)), remove: excessive, add: missing,
+      rationale: excessive.length
+        ? `The task is read-only customer support. Keeping ${actual.filter(p=>required.includes(p)).join(' and ')} preserves every behaviour the agent is actually asked to perform. Removing ${excessive.join(', ')} costs nothing the task describes, and closes the paths a malicious customer message could otherwise reach.`
+        : 'No change needed. The granted scope already matches the task.',
+    },
+    approvalStatus:'PENDING', decidedBy:null, finalPermissions:[], createdAt:now(),
+    nodeTrace:[
+      {node:'taskAnalyzer',ms:1840+Math.floor(Math.random()*900)},
+      {node:'permissionAuditor',ms:1120+Math.floor(Math.random()*700)},
+      {node:'riskAnalyzer',ms:2960+Math.floor(Math.random()*1200)},
+      {node:'recommendationAgent',ms:2210+Math.floor(Math.random()*1000)},
+    ],
+  };
+  DB.audits.unshift(audit);
+  agent.riskLevel = riskLevel; agent.lastAuditId = audit._id;
+  return audit;
+}
+function approveAudit(audit){
+  const agent = getAgent(audit.agentId);
+  const final = [...new Set([...audit.recommendations.keep, ...audit.recommendations.add])];
+  agent.grantedPermissions = final;
+  agent.tools = agent.tools.filter(t=>final.includes(permOf(t)));
+  agent.status='SECURED'; agent.riskLevel='LOW';
+  audit.approvalStatus='APPROVED'; audit.decidedBy='Security Admin'; audit.finalPermissions=final; audit.decidedAt=now();
+}
+/* Deterministic "agent" reply — stands in for the LLM so the flow is demoable */
+function fakeAgentTurn(agent, msg){
+  const granted = new Set(agent.grantedPermissions);
+  const trace=[]; const m=msg.toLowerCase();
+  const orderId = (msg.match(/\b(10\d\d)\b/)||[])[1];
+  const empId = (msg.match(/\b(E-0\d)\b/i)||[])[1];
+  const call=(tool,args,deniedMsg,okFn)=>{
+    const perm=permOf(tool);
+    if(!granted.has(perm)){ trace.push({tool,permission:perm,denied:true}); agent.toolLogs.unshift({tool,permission:perm,outcome:'DENIED',at:now()}); return {denied:true,text:deniedMsg}; }
+    trace.push({tool,permission:perm,denied:false}); agent.toolLogs.unshift({tool,permission:perm,outcome:'ALLOWED',at:now()});
+    return {denied:false,text:okFn()};
+  };
+  let reply;
+  if (/delete|remove|cancel the order/.test(m) && orderId){
+    const r = call('deleteOrder',{orderId},`I can't delete order #${orderId}. That action needs the DELETE_ORDERS permission, which isn't granted to me.`,()=>`Order #${orderId} has been permanently deleted.`);
+    reply=r.text;
+  } else if (/salary|payroll|earn|paid|compensation/.test(m)){
+    const id = empId || 'E-01';
+    const r = call('getPayroll',{employeeId:id},`I'm not able to look up payroll records. That requires the READ_PAYROLL permission, which isn't granted to me.`,()=>{
+      const e=EMPLOYEES[id]||EMPLOYEES['E-01'];
+      return `${e.name} (${e.role}) has an annual salary of $${e.salary.toLocaleString()}, paid to account ${e.bankAccount}.`;
+    });
+    reply=r.text;
+  } else if (/customer|who (is|ordered)|buyer|email/.test(m)){
+    const o = ORDERS[orderId||'1024'];
+    const r1 = call('getOrder',{orderId:o.orderId},`I can't look up orders — READ_ORDERS isn't granted to me.`,()=>'ok');
+    if (r1.denied) reply=r1.text;
+    else {
+      const r2 = call('getCustomer',{customerId:o.customerId},`I found order #${o.orderId}, but I can't retrieve the customer's details — READ_CUSTOMER isn't granted to me.`,()=>{
+        const c=CUSTOMERS[o.customerId];
+        return `Order #${o.orderId} belongs to ${c.name} (${c.email}), a ${c.tier}-tier customer.`;
+      });
+      reply=r2.text;
+    }
+  } else if (/stock|inventory|in stock/.test(m)){
+    const r = call('getInventory',{sku:'SKU-77'},`I can't check inventory — READ_INVENTORY isn't granted to me.`,()=>`SKU-77 (Noise Cancelling Headphones) has 42 units in stock at WH-EAST.`);
+    reply=r.text;
+  } else if (orderId || /order|status|ship|deliver|track/.test(m)){
+    const id = orderId||'1024'; const o=ORDERS[id];
+    const r = call('getOrder',{orderId:id},`I can't look up order information. READ_ORDERS isn't granted to me.`,()=>
+      o ? `Order #${o.orderId} has been ${o.status.toLowerCase()} and is expected to arrive ${o.expectedDelivery.toLowerCase()}. It contains ${o.items[0].qty} × ${o.items[0].name}, totalling $${o.total}.`
+        : `I couldn't find an order with ID ${id}.`);
+    reply=r.text;
+  } else {
+    reply = `I can help with questions about orders, shipping and delivery. Try asking me about a specific order number, like #1024.`;
+  }
+  return {reply, trace};
+}
+
+/* ============================== UI HELPERS ============================== */
+const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const riskCls = { HIGH:'bg-red-50 text-red-700 ring-red-200', MEDIUM:'bg-amber-50 text-amber-700 ring-amber-200', LOW:'bg-emerald-50 text-emerald-700 ring-emerald-200', UNKNOWN:'bg-slate-100 text-slate-600 ring-slate-200' };
+const statCls = { SECURED:'bg-emerald-50 text-emerald-700 ring-emerald-200', APPROVED:'bg-emerald-50 text-emerald-700 ring-emerald-200', PENDING:'bg-amber-50 text-amber-700 ring-amber-200', REJECTED:'bg-slate-100 text-slate-600 ring-slate-200', UNAUDITED:'bg-slate-100 text-slate-600 ring-slate-200' };
+const riskBadge = l => `<span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset ${riskCls[l]||riskCls.UNKNOWN}">${l||'UNKNOWN'}</span>`;
+const statBadge = s => `<span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${statCls[s]||statCls.UNAUDITED}">${s}</span>`;
+const pillCls = { ok:'bg-emerald-50 text-emerald-800 border-emerald-200', bad:'bg-red-50 text-red-800 border-red-200', warn:'bg-amber-50 text-amber-800 border-amber-200', neutral:'bg-slate-50 text-slate-700 border-slate-200' };
+const pill = (p,t='neutral') => `<span class="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-[11px] font-semibold ${pillCls[t]}">${t==='ok'?'✓ ':''}${t==='bad'?'⚠ ':''}${p}</span>`;
+const spinner = (c='h-5 w-5') => `<svg class="spin ${c}" viewBox="0 0 24 24" fill="none"><circle class="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg>`;
+const fmt = d => new Date(d).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+
+function toast(msg, kind='ok'){
+  const el=document.createElement('div');
+  el.className=`fade pointer-events-auto rounded-lg border px-4 py-2.5 text-sm font-medium shadow-lg ${kind==='ok'?'border-emerald-200 bg-white text-slate-800':kind==='warn'?'border-amber-200 bg-white text-amber-900':'border-red-200 bg-white text-red-800'}`;
+  el.innerHTML=`${kind==='ok'?'✅':kind==='warn'?'🛑':'⚠️'} ${esc(msg)}`;
+  document.getElementById('toast').appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(()=>el.remove(),300);},2800);
+}
+
+/* ============================== ROUTER ============================== */
+const NAV = [
+  {id:'dashboard', label:'Dashboard', icon:'▤'},
+  {id:'create',    label:'Create Agent', icon:'＋'},
+  {id:'agents',    label:'My Agents', icon:'◎'},
+  {id:'logs',      label:'Audit Logs', icon:'☰'},
+  {id:'settings',  label:'Settings', icon:'⚙'},
+];
+const TITLES = {
+  dashboard:['Dashboard','Security posture across every AI agent in your organization.'],
+  create:['Create Agent','Provision a new AI agent and grant it tools.'],
+  agents:['My Agents','Every agent you have deployed, with its current permission scope.'],
+  detail:['Agent Details','Configuration and permission scope.'],
+  chat:['Use Agent','Chat with the live agent and watch its tool calls.'],
+  audit:['Audit Agent','Review what AgentGuard will inspect, then start the audit.'],
+  workflow:['Audit Workflow','LangGraph is analyzing this agent.'],
+  report:['Audit Report','Findings from the AgentGuard workflow.'],
+  approval:['Human Approval','Nothing changes until you approve it.'],
+  secured:['Agent Secured','Permission scope reduced and enforced.'],
+  logs:['Audit Logs','Full history of permission audits and human approval decisions.'],
+  settings:['Settings','Environment, database and model configuration.'],
+};
+let route = {page:'dashboard', id:null};
+let chatState = {};
+
+function go(page, id){ route={page,id}; render(); window.scrollTo({top:0}); }
+
+function renderNav(){
+  document.getElementById('nav').innerHTML = NAV.map(n=>{
+    const on = route.page===n.id;
+    return `<button onclick="go('${n.id}')" class="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition ${on?'bg-brand-500 text-white':'text-slate-300 hover:bg-navy-700 hover:text-white'}">
+      <span class="w-4 text-center opacity-80">${n.icon}</span>${n.label}</button>`;
+  }).join('');
+}
+
+function render(){
+  renderNav();
+  const [t,s] = TITLES[route.page]||['AgentGuard',''];
+  document.getElementById('pageTitle').textContent=t;
+  document.getElementById('pageSub').textContent=s;
+  const pending = DB.audits.filter(a=>a.approvalStatus==='PENDING').length;
+  const bell=document.getElementById('bell');
+  bell.className = pending? 'absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white' : 'hidden';
+  bell.textContent=pending;
+  const v=document.getElementById('view');
+  v.className='flex-1 px-5 py-6 md:px-8 md:py-8 fade';
+  v.innerHTML = PAGES[route.page](route.id);
+  if (route.page==='workflow') startWorkflow(route.id);
+  if (route.page==='chat') scrollChat();
+}
+
+/* ============================== PAGES ============================== */
+const PAGES = {};
+
+PAGES.dashboard = () => {
+  const stats = {
+    totalAgents: DB.agents.length,
+    highRisk: DB.agents.filter(a=>a.riskLevel==='HIGH').length,
+    mediumRisk: DB.agents.filter(a=>a.riskLevel==='MEDIUM').length,
+    totalAudits: DB.audits.length,
+  };
+  const pending = DB.audits.filter(a=>a.approvalStatus==='PENDING').length;
+  const cards=[['Total Agents',stats.totalAgents,'bg-brand-50 text-brand-700','◎'],['High Risk',stats.highRisk,'bg-red-50 text-red-700','⚠'],['Medium Risk',stats.mediumRisk,'bg-amber-50 text-amber-700','◐'],['Total Audits',stats.totalAudits,'bg-emerald-50 text-emerald-700','✓']];
+  return `
+  <div class="space-y-6">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      ${cards.map(([l,v,tone,ic])=>`<div class="card p-5"><div class="flex items-start justify-between">
+        <div><p class="text-sm font-medium text-slate-500">${l}</p><p class="mt-2 text-3xl font-extrabold tracking-tight text-slate-900">${v}</p></div>
+        <div class="flex h-10 w-10 items-center justify-center rounded-lg text-lg ${tone}">${ic}</div></div></div>`).join('')}
+    </div>
+
+    ${pending?`<div class="card flex flex-wrap items-center justify-between gap-3 border-amber-200 bg-amber-50/60 p-4">
+      <p class="text-sm font-medium text-amber-900"><strong>${pending}</strong> audit${pending>1?'s are':' is'} waiting on your approval. No permissions change until you decide.</p>
+      <button class="btn btn-ghost" onclick="go('logs')">Review</button></div>`:''}
+
+    <div class="card overflow-hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <div><h2 class="text-base font-bold text-slate-900">Your AI Agents</h2>
+        <p class="text-sm text-slate-500">Live agents and their current permission scope.</p></div>
+        <button class="btn btn-primary" onclick="go('create')">+ Create Agent</button>
+      </div>
+      <div class="overflow-x-auto"><table class="w-full min-w-[760px]">
+        <thead class="bg-slate-50"><tr><th class="th">Agent Name</th><th class="th">Task</th><th class="th">Status</th><th class="th">Risk Level</th><th class="th text-right">Actions</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+        ${DB.agents.map(a=>`<tr class="hover:bg-slate-50/70">
+          <td class="td"><p class="font-semibold text-slate-900">${esc(a.name)}</p><p class="text-xs text-slate-500">${a.grantedPermissions.length} permissions</p></td>
+          <td class="td max-w-sm"><p class="text-slate-600">${esc(a.task)}</p></td>
+          <td class="td">${statBadge(a.status)}</td>
+          <td class="td">${riskBadge(a.riskLevel)}</td>
+          <td class="td"><div class="flex justify-end gap-2">
+            <button class="btn btn-ghost btn-sm" onclick="go('detail','${a._id}')">View</button>
+            <button class="btn btn-primary btn-sm" onclick="go('audit','${a._id}')">Audit</button></div></td></tr>`).join('')}
+        </tbody></table></div>
+    </div>
+  </div>`;
+};
+
+let form = { name:'', task:'', tools:[] };
+PAGES.create = () => {
+  const perms=[...new Set(form.tools.map(permOf))];
+  const riskTone={HIGH:'text-red-700 bg-red-50 border-red-200',MEDIUM:'text-amber-700 bg-amber-50 border-amber-200',LOW:'text-emerald-700 bg-emerald-50 border-emerald-200'};
+  return `
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="space-y-6 lg:col-span-2">
+      <div class="card p-6">
+        <div class="mb-5 flex items-start justify-between gap-4">
+          <div><h2 class="text-base font-bold text-slate-900">Agent Identity</h2>
+          <p class="text-sm text-slate-500">What the agent is called and what it is for.</p></div>
+          <button class="btn btn-ghost btn-sm text-xs" onclick="loadPreset()">Load demo preset</button>
+        </div>
+        <div class="space-y-4">
+          <div><label class="mb-1.5 block text-sm font-semibold text-slate-800">Agent Name</label>
+            <input class="input" placeholder="Customer Support Agent" value="${esc(form.name)}" oninput="form.name=this.value"></div>
+          <div><label class="mb-1.5 block text-sm font-semibold text-slate-800">Purpose / Task</label>
+            <textarea class="input" style="min-height:92px;resize:vertical" placeholder="Answer customer questions about orders, shipping and delivery." oninput="form.task=this.value">${esc(form.task)}</textarea>
+            <p class="mt-1.5 text-xs text-slate-500">Be precise. AgentGuard derives the minimum required permissions from this sentence.</p></div>
+        </div>
+      </div>
+
+      <div class="card p-6">
+        <h2 class="text-base font-bold text-slate-900">Select Tools / Permissions</h2>
+        <p class="mb-5 text-sm text-slate-500">Each tool grants exactly one permission. The backend enforces these at execution time.</p>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        ${TOOLS.map(t=>{const on=form.tools.includes(t.toolName);return `
+          <label class="flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${on?'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500/20':'border-slate-200 hover:border-slate-300 hover:bg-slate-50'}">
+            <input type="checkbox" ${on?'checked':''} onchange="toggleTool('${t.toolName}')" class="mt-0.5 h-4 w-4 rounded border-slate-300 accent-blue-600">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-sm font-semibold text-slate-900">${t.label}</p>
+                <span class="rounded border px-1.5 py-0.5 text-[10px] font-bold ${riskTone[t.risk]}">${t.risk}</span></div>
+              <p class="mt-0.5 font-mono text-[11px] font-semibold text-brand-700">${t.permission}</p>
+              <p class="mt-1.5 text-xs leading-relaxed text-slate-500">${t.desc}</p></div></label>`;}).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div><div class="card p-6" style="position:sticky;top:7rem">
+      <h3 class="text-base font-bold text-slate-900">Summary</h3>
+      <dl class="mt-4 space-y-3 text-sm">
+        <div class="flex justify-between"><dt class="text-slate-500">Tools selected</dt><dd class="font-semibold text-slate-900">${form.tools.length}</dd></div>
+        <div class="flex justify-between"><dt class="text-slate-500">Permissions granted</dt><dd class="font-semibold text-slate-900">${perms.length}</dd></div>
+      </dl>
+      ${perms.length?`<div class="mt-4 flex flex-wrap gap-1.5">${perms.map(p=>pill(p)).join('')}</div>`:''}
+      <div class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <p class="text-xs leading-relaxed text-slate-600">Over-granting on purpose is fine here — that is the point of the demo. AgentGuard will flag anything the stated task does not need.</p></div>
+      <button class="btn btn-primary mt-5 w-full" onclick="createAgent()">Create Agent</button>
+      <button class="btn btn-ghost mt-2 w-full" onclick="go('dashboard')">Cancel</button>
+    </div></div>
+  </div>`;
+};
+function toggleTool(n){ form.tools = form.tools.includes(n)? form.tools.filter(x=>x!==n) : [...form.tools,n]; render(); }
+function loadPreset(){ form={name:'Customer Support Agent',task:'Answer customer questions about orders, shipping and delivery.',tools:['getOrder','getCustomer','updateOrder','deleteOrder','getPayroll']}; render(); }
+function createAgent(){
+  if(!form.name.trim()||!form.task.trim()) return toast('Name and task are required.','err');
+  if(!form.tools.length) return toast('Select at least one tool.','err');
+  const perms=[...new Set(form.tools.map(permOf))];
+  const a={_id:'a'+(uid++),name:form.name.trim(),task:form.task.trim(),tools:[...form.tools],grantedPermissions:perms,originalPermissions:perms,riskLevel:'UNKNOWN',status:'UNAUDITED',createdAt:now(),toolLogs:[]};
+  DB.agents.unshift(a); const id=a._id; form={name:'',task:'',tools:[]};
+  toast(`${a.name} created and ready to chat.`); go('detail',id);
+}
+
+PAGES.agents = () => DB.agents.length? `
+  <div class="space-y-4">
+    <div class="flex justify-end"><button class="btn btn-primary" onclick="go('create')">+ Create Agent</button></div>
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    ${DB.agents.map(a=>{const rev=a.originalPermissions.length-a.grantedPermissions.length;return `
+      <div class="card flex flex-col p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0"><h3 class="truncate text-base font-bold text-slate-900">${esc(a.name)}</h3>
+          <p class="mt-1 text-sm text-slate-600">${esc(a.task)}</p></div>
+          <div class="flex shrink-0 flex-col items-end gap-1.5">${riskBadge(a.riskLevel)}${statBadge(a.status)}</div></div>
+        <div class="mt-4 grid grid-cols-3 gap-3 rounded-lg bg-slate-50 p-3 text-center">
+          <div><p class="text-lg font-bold text-slate-900">${activeTools(a).length}</p><p class="text-[11px] font-medium text-slate-500">Active tools</p></div>
+          <div><p class="text-lg font-bold text-slate-900">${a.grantedPermissions.length}</p><p class="text-[11px] font-medium text-slate-500">Permissions</p></div>
+          <div><p class="text-lg font-bold text-slate-900">${rev>0?rev:0}</p><p class="text-[11px] font-medium text-slate-500">Revoked</p></div></div>
+        <div class="mt-3 flex flex-wrap gap-1.5">${a.grantedPermissions.map(p=>pill(p)).join('')}</div>
+        <p class="mt-3 text-xs text-slate-400">Created ${fmt(a.createdAt)}</p>
+        <div class="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+          <button class="btn btn-ghost btn-sm" onclick="go('detail','${a._id}')">View</button>
+          <button class="btn btn-ghost btn-sm" onclick="go('chat','${a._id}')">Chat</button>
+          <button class="btn btn-primary btn-sm" onclick="go('audit','${a._id}')">Audit</button></div>
+      </div>`;}).join('')}
+    </div></div>`
+  : emptyState('No agents yet','Create your first AI agent to start auditing its permission scope.',`<button class="btn btn-primary" onclick="go('create')">+ Create Agent</button>`);
+
+function emptyState(t,b,action=''){ return `<div class="card p-12 text-center">
+  <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-2xl">🛡️</div>
+  <h3 class="text-base font-semibold text-slate-900">${t}</h3>
+  <p class="mx-auto mt-1 max-w-sm text-sm text-slate-500">${b}</p>${action?`<div class="mt-5">${action}</div>`:''}</div>`; }
+
+PAGES.detail = (id) => {
+  const a=getAgent(id); const audits=DB.audits.filter(x=>x.agentId===id);
+  return `<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="space-y-6 lg:col-span-2">
+      <div class="card p-6">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div><h2 class="text-xl font-bold text-slate-900">${esc(a.name)}</h2>
+          <p class="mt-1 max-w-xl text-sm text-slate-600">${esc(a.task)}</p></div>
+          <div class="flex gap-2">${riskBadge(a.riskLevel)}${statBadge(a.status)}</div></div>
+        <div class="mt-5 flex flex-wrap gap-2">
+          <button class="btn btn-primary" onclick="go('chat','${a._id}')">Use Agent</button>
+          <button class="btn btn-ghost" onclick="go('audit','${a._id}')">Audit Agent</button></div>
+      </div>
+      <div class="card p-6">
+        <h3 class="text-base font-bold text-slate-900">Tools &amp; Permission Scope</h3>
+        <p class="mb-4 text-sm text-slate-500">Revoked tools are unbound from the model and blocked at execution.</p>
+        <div class="space-y-2">
+        ${a.originalPermissions.map(p=>{const t=toolFor(p); const on=a.grantedPermissions.includes(p); return `
+          <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3.5 ${on?'border-slate-200 bg-white':'border-slate-200 bg-slate-50 opacity-70'}">
+            <div class="min-w-0"><p class="text-sm font-semibold ${on?'text-slate-900':'text-slate-500 line-through'}">${t.label} <span class="font-mono text-xs font-normal text-slate-400">${t.toolName}()</span></p>
+            <p class="mt-0.5 font-mono text-[11px] font-semibold text-brand-700">${p}</p></div>
+            <span class="rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset ${on?'bg-emerald-50 text-emerald-700 ring-emerald-200':'bg-red-50 text-red-700 ring-red-200'}">${on?'ACTIVE':'REVOKED'}</span></div>`;}).join('')}
+        </div>
+      </div>
+      ${a.toolLogs.length?`<div class="card overflow-hidden">
+        <div class="border-b border-slate-200 px-5 py-4"><h3 class="text-base font-bold text-slate-900">Tool Execution Log</h3>
+        <p class="text-sm text-slate-500">Every attempt, allowed or denied, recorded server-side.</p></div>
+        <div class="divide-y divide-slate-100" style="max-height:20rem;overflow-y:auto">
+        ${a.toolLogs.slice(0,20).map(l=>`<div class="flex items-center justify-between gap-3 px-5 py-3">
+          <div><p class="font-mono text-xs font-semibold text-slate-800">${l.tool}()</p>
+          <p class="text-[11px] text-slate-500">${l.permission} · ${fmt(l.at)}</p></div>
+          <span class="rounded px-2 py-0.5 text-[11px] font-bold ${l.outcome==='ALLOWED'?'bg-emerald-50 text-emerald-700':'bg-red-50 text-red-700'}">${l.outcome}</span></div>`).join('')}
+        </div></div>`:''}
+    </div>
+    <div class="space-y-6">
+      <div class="card p-6"><h3 class="text-base font-bold text-slate-900">Audit History</h3>
+      ${audits.length? `<div class="mt-3 space-y-2">${audits.map(x=>`
+        <button onclick="go('report','${x._id}')" class="block w-full rounded-lg border border-slate-200 p-3 text-left transition hover:border-brand-300 hover:bg-brand-50/40">
+          <div class="flex items-center justify-between gap-2">${riskBadge(x.riskLevel)}${statBadge(x.approvalStatus)}</div>
+          <p class="mt-2 text-xs text-slate-500">${fmt(x.createdAt)}</p></button>`).join('')}</div>`
+        : `<p class="mt-3 text-sm text-slate-500">This agent has never been audited.</p>`}</div>
+      <div class="card p-6"><h3 class="text-sm font-bold text-slate-900">Metadata</h3>
+        <dl class="mt-3 space-y-2 text-sm">
+          <div class="flex justify-between"><dt class="text-slate-500">Agent ID</dt><dd class="font-mono text-xs text-slate-700">${a._id}</dd></div>
+          <div class="flex justify-between"><dt class="text-slate-500">Original perms</dt><dd class="text-slate-700">${a.originalPermissions.length}</dd></div>
+          <div class="flex justify-between"><dt class="text-slate-500">Current perms</dt><dd class="font-semibold text-slate-900">${a.grantedPermissions.length}</dd></div>
+        </dl></div>
+    </div></div>`;
+};
+
+const SUGGESTIONS = ['What is the status of order #1024?','Who is the customer on order #1024?','Delete order 1027.','What is the salary of employee E-01?'];
+PAGES.chat = (id) => {
+  const a=getAgent(id); const msgs = chatState[id] ||= [];
+  return `<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div class="card flex flex-col lg:col-span-2" style="height:calc(100vh - 13rem)">
+      <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+        <div class="flex items-center gap-3">
+          <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-navy-800 text-lg">🤖</div>
+          <div><p class="text-sm font-bold text-slate-900">${esc(a.name)}</p>
+          <p class="text-xs text-slate-500">${activeTools(a).length} tools active · live LLM</p></div></div>
+        <button class="btn btn-ghost btn-sm" onclick="go('audit','${a._id}')">Audit</button></div>
+
+      <div id="chatBody" class="flex-1 space-y-4 overflow-y-auto p-5">
+      ${msgs.length? msgs.map(m=>renderMsg(m)).join('') : `
+        <div class="py-10 text-center">
+          <p class="text-sm font-medium text-slate-600">Ask the agent something.</p>
+          <p class="mt-1 text-xs text-slate-400">It will call real tools against the sandbox database.</p>
+          <div class="mx-auto mt-5 flex max-w-md flex-wrap justify-center gap-2">
+          ${SUGGESTIONS.map(s=>`<button onclick="send('${a._id}',${JSON.stringify(s).replace(/"/g,'&quot;')})" class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-brand-300 hover:text-brand-700">${esc(s)}</button>`).join('')}
+          </div></div>`}
+      </div>
+
+      <div class="border-t border-slate-200 p-4"><div class="flex gap-2">
+        <input id="chatInput" class="input flex-1" placeholder="Ask about an order, customer, refund…" onkeydown="if(event.key==='Enter')send('${a._id}')">
+        <button class="btn btn-primary" onclick="send('${a._id}')">Send</button></div></div>
+    </div>
+
+    <div class="space-y-6">
+      <div class="card p-5">
+        <div class="flex items-center justify-between"><h3 class="text-sm font-bold text-slate-900">Current Permission Scope</h3>${riskBadge(a.riskLevel)}</div>
+        <div class="mt-3 space-y-1.5">
+        ${a.originalPermissions.map(p=>{const t=toolFor(p); const on=a.grantedPermissions.includes(p); return `
+          <div class="flex items-center justify-between gap-2 text-xs">
+            <span class="font-mono ${on?'text-slate-700':'text-slate-400 line-through'}">${t.toolName}()</span>
+            <span class="font-semibold ${on?'text-emerald-600':'text-red-500'}">${on?'granted':'revoked'}</span></div>`;}).join('')}
+        </div>
+      </div>
+      <div class="card p-5">
+        <h3 class="text-sm font-bold text-slate-900">Enforcement Probe</h3>
+        <p class="mt-1 text-xs leading-relaxed text-slate-500">Calls the tool directly, bypassing the LLM entirely. If the permission is revoked, the backend returns 403 — proving the control is server-side, not cosmetic.</p>
+        <div class="mt-3 space-y-2">
+          <button class="btn btn-ghost w-full btn-sm text-xs" onclick="probe('${a._id}','getOrder',{orderId:'1024'})">Probe getOrder(1024)</button>
+          <button class="btn btn-ghost w-full btn-sm text-xs" onclick="probe('${a._id}','deleteOrder',{orderId:'1026'})">Probe deleteOrder(1026)</button>
+          <button class="btn btn-ghost w-full btn-sm text-xs" onclick="probe('${a._id}','getPayroll',{employeeId:'E-01'})">Probe getPayroll(E-01)</button>
+        </div>
+      </div>
+    </div></div>`;
+};
+function renderMsg(m){
+  if(m.role==='probe') return `<pre class="overflow-x-auto whitespace-pre-wrap rounded-lg border p-3 font-mono text-[11px] ${m.denied?'border-red-200 bg-red-50 text-red-800':'border-emerald-200 bg-emerald-50 text-emerald-800'}">${esc(m.content)}</pre>`;
+  if(m.role==='user') return `<div class="flex justify-end"><div class="max-w-[85%] rounded-2xl bg-brand-500 px-4 py-3 text-sm leading-relaxed text-white">${esc(m.content)}</div></div>`;
+  if(m.role==='typing') return `<div class="flex items-center gap-2 text-sm text-slate-400">${spinner('h-4 w-4')} Agent is thinking and calling tools…</div>`;
+  return `<div class="flex justify-start"><div class="w-full">
+    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-800">${esc(m.content)}</div>
+    ${(m.trace||[]).length?`<div class="mt-2 space-y-1.5">${m.trace.map(t=>`
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-2 text-xs ${t.denied?'border-red-200 bg-red-50':'border-slate-200 bg-white'}">
+        <span class="font-semibold text-slate-500">Tool Used:</span><span class="font-mono font-bold text-slate-800">${t.tool}()</span>
+        <span class="font-semibold text-slate-500">Permission:</span><span class="font-mono font-bold text-brand-700">${t.permission}</span>
+        <span class="ml-auto rounded px-1.5 py-0.5 font-bold ${t.denied?'bg-red-100 text-red-700':'bg-emerald-100 text-emerald-700'}">${t.denied?'DENIED':'OK'}</span></div>`).join('')}</div>`:''}
+  </div></div>`;
+}
+function scrollChat(){ const b=document.getElementById('chatBody'); if(b) b.scrollTop=b.scrollHeight; }
+function send(id, preset){
+  const inp=document.getElementById('chatInput');
+  const text=(preset ?? inp.value).trim(); if(!text) return;
+  if(inp) inp.value='';
+  const a=getAgent(id); const msgs=chatState[id]||=[];
+  msgs.push({role:'user',content:text}); msgs.push({role:'typing'});
+  render();
+  setTimeout(()=>{
+    msgs.pop();
+    const {reply,trace}=fakeAgentTurn(a,text);
+    msgs.push({role:'assistant',content:reply,trace});
+    render();
+  }, 900);
+}
+function probe(id,tool,args){
+  const a=getAgent(id); const perm=permOf(tool);
+  const msgs=chatState[id]||=[];
+  if(!a.grantedPermissions.includes(perm)){
+    a.toolLogs.unshift({tool,permission:perm,outcome:'DENIED',at:now()});
+    msgs.push({role:'probe',denied:true,content:`POST /api/agents/${id}/probe  →  403\n\nDirect probe: ${tool}() DENIED\nPERMISSION_DENIED: tool "${tool}" requires permission "${perm}",\nwhich is not granted to this agent. The call was blocked by\nAgentGuard and no data was read or modified.`});
+    toast(`Blocked: ${tool}() — ${perm} not granted.`);
+  } else {
+    a.toolLogs.unshift({tool,permission:perm,outcome:'ALLOWED',at:now()});
+    const res = tool==='getOrder'? ORDERS['1024'] : tool==='getPayroll'? {employeeId:'E-01',...EMPLOYEES['E-01']} : {deleted:true,orderId:args.orderId};
+    msgs.push({role:'probe',denied:false,content:`POST /api/agents/${id}/probe  →  200\n\nDirect probe: ${tool}() ALLOWED\n${JSON.stringify(res,null,2)}`});
+    toast(`${tool}() allowed — permission still granted.`);
+  }
+  render(); setTimeout(scrollChat,0);
+}
+
+const CHECKS=[['Understand the agent’s task','An LLM reads the stated purpose and infers intent.'],
+['Analyze required permissions','Derives the minimum scope the task genuinely needs.'],
+['Compare with actual permissions','Exact set difference against what is granted.'],
+['Assess security risks','Blast radius of each excessive permission.'],
+['Generate recommendations','A least-privilege scope with written justification.'],
+['Require human approval','Nothing is changed without your explicit sign-off.']];
+PAGES.audit = (id) => { const a=getAgent(id); return `
+  <div class="mx-auto max-w-4xl space-y-6">
+    <div class="card p-6">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div><p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Agent under audit</p>
+        <h2 class="mt-1 text-xl font-bold text-slate-900">${esc(a.name)}</h2>
+        <p class="mt-1 max-w-xl text-sm text-slate-600">${esc(a.task)}</p></div>${riskBadge(a.riskLevel)}</div>
+      <div class="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3">
+        ${[['Tools',activeTools(a).length],['Permissions',a.grantedPermissions.length],['Previous audits',DB.audits.filter(x=>x.agentId===id).length||'None']]
+          .map(([l,v])=>`<div class="rounded-lg bg-slate-50 p-4"><p class="text-2xl font-extrabold text-slate-900">${v}</p><p class="text-xs font-medium text-slate-500">${l}</p></div>`).join('')}</div>
+      <div class="mt-5"><p class="mb-2 text-sm font-semibold text-slate-800">Current Permissions</p>
+        <div class="flex flex-wrap gap-2">${a.grantedPermissions.map(p=>pill(p)).join('')}</div></div>
+    </div>
+    <div class="card p-6">
+      <h3 class="text-base font-bold text-slate-900">What will AgentGuard check?</h3>
+      <ul class="mt-4 space-y-3">${CHECKS.map(([t,d])=>`<li class="flex gap-3">
+        <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">✓</span>
+        <div><p class="text-sm font-semibold text-slate-800">${t}</p><p class="text-xs text-slate-500">${d}</p></div></li>`).join('')}</ul>
+      <div class="mt-6 flex flex-wrap gap-2">
+        <button class="btn btn-primary" onclick="go('workflow','${a._id}')">Start Audit</button>
+        <button class="btn btn-ghost" onclick="go('detail','${a._id}')">Back to agent</button></div>
+    </div></div>`; };
+
+const NODES=[{id:'taskAnalyzer',label:'Task Analyzer',d:"Understands what the agent is for"},
+{id:'permissionAuditor',label:'Permission Auditor',d:'Compares required vs granted'},
+{id:'riskAnalyzer',label:'Risk Analyzer',d:'Assesses blast radius of excess'},
+{id:'recommendationAgent',label:'Recommendation Agent',d:'Proposes least privilege'},
+{id:'humanApproval',label:'Human Approval',d:'Required before any change'}];
+PAGES.workflow = () => `
+  <div class="mx-auto max-w-2xl"><div class="card p-8">
+    <div class="mb-8 text-center"><h2 class="text-lg font-bold text-slate-900">LangGraph Audit Workflow</h2>
+    <p class="mt-1 text-sm text-slate-500">Four LLM nodes running in sequence against this agent.</p></div>
+    <div id="nodes">${NODES.map((n,i)=>nodeRow(n,i,'idle')).join('')}</div>
+  </div></div>`;
+function nodeRow(n,i,state,ms){
+  const done=state==='done', active=state==='active';
+  return `<div><div class="flex items-center gap-4 rounded-xl border p-4 transition ${active?'border-brand-300 bg-brand-50/60':done?'border-emerald-200 bg-emerald-50/40':'border-slate-200 bg-white'}" style="${active?'box-shadow:0 0 0 3px rgba(37,99,235,.12)':''}">
+    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${done?'bg-emerald-600 text-white':active?'bg-brand-500 text-white':'bg-slate-100 text-slate-400'}">${done?'✓':active?spinner('h-4 w-4'):i+1}</div>
+    <div class="min-w-0 flex-1"><p class="text-sm font-bold ${done||active?'text-slate-900':'text-slate-400'}">${n.label}</p>
+    <p class="text-xs text-slate-500">${n.d}</p></div>
+    <div class="shrink-0 text-right">${ms?`<p class="font-mono text-[11px] text-emerald-700">${ms}ms</p>`:''}
+    ${n.id==='humanApproval'?`<p class="text-[11px] font-semibold text-amber-600 ${active?'pulse-dot':''}">awaits you</p>`:''}</div></div>
+    ${i<NODES.length-1?`<div class="flex justify-center py-1"><div class="h-5 w-0.5 ${done?'bg-emerald-400':'bg-slate-200'}"></div></div>`:''}</div>`;
+}
+function startWorkflow(id){
+  const a=getAgent(id); const audit=runAuditNow(a);
+  const states=NODES.map(()=>'idle'); const times={};
+  const el=()=>document.getElementById('nodes');
+  const paint=()=>{ const n=el(); if(n) n.innerHTML=NODES.map((x,i)=>nodeRow(x,i,states[i],times[x.id])).join(''); };
+  let i=0;
+  const step=()=>{
+    if(i>=4){ states[4]='active'; paint(); toast('Audit complete.'); setTimeout(()=>{ if(route.page==='workflow') go('report',audit._id); },800); return; }
+    states[i]='active'; paint();
+    const ms=audit.nodeTrace[i].ms;
+    setTimeout(()=>{ states[i]='done'; times[NODES[i].id]=ms; i++; paint(); step(); }, Math.min(ms,1500));
+  };
+  setTimeout(step,250);
+}
+
+PAGES.report = (id) => {
+  const d=getAudit(id); const r=d.recommendations;
+  const recCol=(t,tone,items)=>`<div class="rounded-lg border border-slate-200 p-4">
+    <p class="text-xs font-bold uppercase tracking-wide ${tone==='ok'?'text-emerald-700':tone==='bad'?'text-red-700':'text-amber-700'}">${t}</p>
+    <div class="mt-2 flex flex-wrap gap-1.5">${items.length?items.map(p=>pill(p,tone)).join(''):'<span class="text-sm text-slate-400">None</span>'}</div></div>`;
+  return `<div class="mx-auto max-w-5xl space-y-6">
+    <div class="card p-6"><div class="flex flex-wrap items-start justify-between gap-4">
+      <div><p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Audit Report</p>
+      <h2 class="mt-1 text-xl font-bold text-slate-900">${esc(d.agentName)}</h2>
+      <p class="mt-1 max-w-2xl text-sm text-slate-600">${esc(d.task)}</p>
+      <p class="mt-2 text-xs text-slate-400">Run ${fmt(d.createdAt)}</p></div>
+      <div class="text-right"><p class="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-400">Risk Level</p>
+      ${riskBadge(d.riskLevel)}<div class="mt-2">${statBadge(d.approvalStatus)}</div></div></div></div>
+
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div class="card p-5"><h3 class="text-sm font-bold text-emerald-700">REQUIRED PERMISSIONS</h3>
+        <p class="mt-1 text-xs text-slate-500">Minimum scope the task actually needs.</p>
+        <div class="mt-3 flex flex-wrap gap-1.5">${d.requiredPermissions.map(p=>pill(p,'ok')).join('')||'<span class="text-sm text-slate-400">None</span>'}</div>
+        <p class="mt-4 border-t border-slate-100 pt-3 text-xs leading-relaxed text-slate-600">${esc(d.taskAnalysis)}</p></div>
+
+      <div class="card p-5"><h3 class="text-sm font-bold text-red-700">EXCESSIVE PERMISSIONS</h3>
+        <p class="mt-1 text-xs text-slate-500">Granted but not needed for the stated task.</p>
+        <div class="mt-3 flex flex-wrap gap-1.5">${d.excessivePermissions.map(p=>pill(p,'bad')).join('')||'<span class="text-sm text-emerald-600">None — scope is already minimal.</span>'}</div>
+        ${d.missingPermissions.length?`<div class="mt-4 border-t border-slate-100 pt-3"><p class="text-xs font-semibold text-amber-700">Missing</p>
+        <div class="mt-1.5 flex flex-wrap gap-1.5">${d.missingPermissions.map(p=>pill(p,'warn')).join('')}</div></div>`:''}</div>
+
+      <div class="card p-5"><h3 class="text-sm font-bold text-amber-700">RISK ANALYSIS</h3>
+        <p class="mt-1 text-xs text-slate-500">${esc(d.auditSummary)}</p>
+        <div class="mt-3 space-y-2.5">${d.riskReasons.length? d.riskReasons.map(x=>`
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <div class="flex items-center justify-between gap-2"><span class="font-mono text-[11px] font-bold text-slate-800">${x.permission}</span>${riskBadge(x.severity)}</div>
+            <p class="mt-1.5 text-xs leading-relaxed text-slate-600">${esc(x.reason)}</p></div>`).join('')
+          : '<p class="text-sm text-emerald-600">No excessive permissions to assess.</p>'}</div></div>
+    </div>
+
+    <div class="card p-6"><h3 class="text-base font-bold text-slate-900">Recommendation</h3>
+      <p class="text-sm text-slate-500">Proposed least-privilege scope. Not applied yet.</p>
+      <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">${recCol('Keep','ok',r.keep)}${recCol('Remove','bad',r.remove)}${recCol('Add','warn',r.add)}</div>
+      <div class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Rationale</p>
+        <p class="mt-1.5 text-sm leading-relaxed text-slate-700">${esc(r.rationale)}</p></div>
+      <div class="mt-6 flex flex-wrap gap-2 border-t border-slate-100 pt-5">
+      ${d.approvalStatus==='PENDING'
+        ? `<button class="btn btn-primary" onclick="go('approval','${d._id}')">Approve Changes</button><button class="btn btn-ghost" onclick="go('logs')">Back to logs</button>`
+        : `<div class="rounded-lg border px-4 py-2.5 text-sm font-semibold ${d.approvalStatus==='APPROVED'?'border-emerald-200 bg-emerald-50 text-emerald-800':'border-slate-200 bg-slate-50 text-slate-600'}">
+            ${d.approvalStatus==='APPROVED'?`Approved by ${d.decidedBy} — permissions applied.`:`Rejected by ${d.decidedBy} — the agent was left unchanged.`}</div>
+           ${d.approvalStatus==='APPROVED'?`<button class="btn btn-ghost" onclick="go('secured','${d._id}')">View summary</button>`:''}`}
+      </div></div>
+  </div>`;
+};
+
+PAGES.approval = (id) => {
+  const d=getAudit(id); const r=d.recommendations;
+  const recommended=[...new Set([...r.keep,...r.add])];
+  if(d.approvalStatus!=='PENDING') return `<div class="mx-auto max-w-2xl"><div class="card p-8 text-center">
+    <p class="text-base font-bold text-slate-900">This audit was already ${d.approvalStatus.toLowerCase()}.</p>
+    <p class="mt-1 text-sm text-slate-500">Decided by ${d.decidedBy}.</p>
+    <button class="btn btn-ghost mt-5" onclick="go('report','${id}')">View report</button></div></div>`;
+  return `<div class="mx-auto max-w-3xl"><div class="card p-6">
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div><h2 class="text-lg font-bold text-slate-900">${esc(d.agentName)}</h2>
+      <p class="mt-1 text-sm text-slate-600">${esc(d.task)}</p></div>${riskBadge(d.riskLevel)}</div>
+
+    <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="rounded-xl border border-slate-200 p-4">
+        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Current Permissions</p>
+        <div class="mt-2.5 flex flex-wrap gap-1.5">${d.originalPermissions.map(p=>pill(p, r.remove.includes(p)?'bad':'ok')).join('')}</div></div>
+      <div class="rounded-xl border border-emerald-200 bg-emerald-50/40 p-4">
+        <p class="text-xs font-bold uppercase tracking-wide text-emerald-700">Recommended</p>
+        <div class="mt-2.5 flex flex-wrap gap-1.5">${recommended.map(p=>pill(p,'ok')).join('')||'<span class="text-sm text-slate-500">No permissions</span>'}</div></div></div>
+
+    ${r.remove.length?`<div class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <p class="text-sm font-bold text-amber-900">You are about to remove ${r.remove.length} permission${r.remove.length>1?'s':''}.</p>
+      <p class="mt-1 text-sm leading-relaxed text-amber-800">The matching tools will be unbound from the agent immediately and blocked at the backend. If this agent depends on them for something not described in its task, that behaviour will stop working.</p>
+      <div class="mt-2.5 flex flex-wrap gap-1.5">${r.remove.map(p=>pill(p,'bad')).join('')}</div></div>`:''}
+
+    <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+      <p class="text-xs font-semibold uppercase tracking-wide text-slate-500">Why AgentGuard recommends this</p>
+      <p class="mt-1.5 text-sm leading-relaxed text-slate-700">${esc(r.rationale)}</p></div>
+
+    <div class="mt-6 flex flex-wrap gap-2 border-t border-slate-100 pt-5">
+      <button class="btn btn-success" onclick="doApprove('${id}')">Approve Changes</button>
+      <button class="btn btn-danger" onclick="doReject('${id}')">Reject</button>
+      <button class="btn btn-ghost" style="margin-left:auto" onclick="go('report','${id}')">Back to report</button></div>
+    <p class="mt-4 text-xs text-slate-400">Either decision is recorded in MongoDB with a timestamp. Rejecting leaves the agent untouched.</p>
+  </div></div>`;
+};
+function doApprove(id){ const d=getAudit(id); approveAudit(d); toast('Approved. Permissions reduced and enforced.'); go('secured',id); }
+function doReject(id){ const d=getAudit(id); d.approvalStatus='REJECTED'; d.decidedBy='Security Admin'; d.decidedAt=now(); d.finalPermissions=d.originalPermissions; toast('Rejected. The agent was left exactly as it was.','warn'); go('report',id); }
+
+PAGES.secured = (id) => {
+  const d=getAudit(id); const before=d.originalPermissions, after=d.finalPermissions;
+  const list=perms=>perms.map(p=>toolFor(p)).filter(Boolean);
+  return `<div class="mx-auto max-w-3xl space-y-6">
+    <div class="card p-8 text-center">
+      <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-100 text-3xl">✓</div>
+      <h2 class="mt-4 text-2xl font-extrabold tracking-tight text-slate-900">Agent Secured</h2>
+      <p class="mt-1 text-base font-semibold text-slate-700">${esc(d.agentName)}</p>
+      <p class="mt-1 text-sm text-slate-500">Approved by ${d.decidedBy}. The reduced scope is live and enforced at the backend.</p>
+      <div class="mt-7 flex items-center justify-center gap-6">
+        <div><p class="text-4xl font-extrabold text-slate-400">${before.length}</p><p class="text-xs font-semibold uppercase tracking-wide text-slate-400">Before</p></div>
+        <div class="text-3xl text-slate-300">→</div>
+        <div><p class="text-4xl font-extrabold text-emerald-600">${after.length}</p><p class="text-xs font-semibold uppercase tracking-wide text-emerald-600">After</p></div></div>
+      <div class="mt-5 inline-flex items-center rounded-full bg-emerald-50 px-4 py-2 ring-1 ring-inset ring-emerald-200">
+        <span class="text-sm font-bold text-emerald-800">Permission reduction: ${before.length} → ${after.length}</span></div>
+    </div>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div class="card p-5"><p class="text-xs font-bold uppercase tracking-wide text-slate-500">Before</p>
+        <ul class="mt-3 space-y-1.5">${list(before).map(t=>`<li class="text-sm ${after.includes(t.permission)?'text-slate-700':'text-slate-400 line-through'}">${t.label}</li>`).join('')}</ul>
+        <div class="mt-3 flex flex-wrap gap-1.5 border-t border-slate-100 pt-3">${before.map(p=>pill(p, after.includes(p)?'neutral':'bad')).join('')}</div></div>
+      <div class="card p-5" style="border-color:#A7F3D0"><p class="text-xs font-bold uppercase tracking-wide text-emerald-700">After</p>
+        <ul class="mt-3 space-y-1.5">${list(after).map(t=>`<li class="text-sm text-slate-800">${t.label}</li>`).join('')}</ul>
+        <div class="mt-3 flex flex-wrap gap-1.5 border-t border-emerald-100 pt-3">${after.map(p=>pill(p,'ok')).join('')}</div></div>
+    </div>
+    <div class="card p-6"><h3 class="text-base font-bold text-slate-900">Verify it for yourself</h3>
+      <p class="mt-1 text-sm text-slate-600">Open the chat and ask the agent to do something it no longer has permission for. The tool is unbound from the model, and the Enforcement Probe in the side panel will return a 403 straight from the backend.</p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <button class="btn btn-primary" onclick="go('chat','${d.agentId}')">Chat with secured agent</button>
+        <button class="btn btn-ghost" onclick="go('report','${d._id}')">View full report</button>
+        <button class="btn btn-ghost" onclick="go('logs')">Audit logs</button></div></div>
+  </div>`;
+};
+
+PAGES.logs = () => DB.audits.length? `
+  <div class="card overflow-hidden">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+      <div><h2 class="text-base font-bold text-slate-900">Audit History</h2>
+      <p class="text-sm text-slate-500">${DB.audits.length} audit${DB.audits.length>1?'s':''} recorded.</p></div></div>
+    <div class="overflow-x-auto"><table class="w-full min-w-[820px]">
+      <thead class="bg-slate-50"><tr><th class="th">Date &amp; Time</th><th class="th">Agent Name</th><th class="th">Risk Level</th><th class="th">Scope Change</th><th class="th">Status</th><th class="th text-right">Actions</th></tr></thead>
+      <tbody class="divide-y divide-slate-100">
+      ${DB.audits.map(d=>`<tr class="hover:bg-slate-50/70">
+        <td class="td whitespace-nowrap text-slate-500">${fmt(d.createdAt)}</td>
+        <td class="td font-semibold text-slate-900">${esc(d.agentName)}</td>
+        <td class="td">${riskBadge(d.riskLevel)}</td>
+        <td class="td">${d.approvalStatus==='APPROVED'
+          ? `<span class="font-mono text-xs font-semibold text-emerald-700">${d.originalPermissions.length} → ${d.finalPermissions.length}</span>`
+          : `<span class="font-mono text-xs text-slate-400">${d.originalPermissions.length} → ${d.recommendations.keep.length} proposed</span>`}</td>
+        <td class="td">${statBadge(d.approvalStatus==='APPROVED'?'SECURED':d.approvalStatus)}</td>
+        <td class="td"><div class="flex justify-end gap-2">
+          <button class="btn btn-ghost btn-sm" onclick="go('report','${d._id}')">View Audit</button>
+          ${d.approvalStatus==='PENDING'?`<button class="btn btn-primary btn-sm" onclick="go('approval','${d._id}')">Review</button>`:''}</div></td></tr>`).join('')}
+      </tbody></table></div></div>`
+  : emptyState('No audits yet','Run an audit on one of your agents to populate this log.');
+
+PAGES.settings = () => `
+  <div class="mx-auto max-w-4xl space-y-6">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      ${statusCard('MongoDB',true,'connected','Agents, audits and sandbox data are persisting.')}
+      ${statusCard('LLM',true,'anthropic · claude-sonnet-4-5','Used by both the target agent and the audit workflow.')}
+    </div>
+    <div class="card p-6"><h3 class="text-base font-bold text-slate-900">Environment</h3>
+      <dl class="mt-4 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+      ${[['Node environment','development',''],['API port','5000',''],['Demo / sandbox mode','ENABLED','ok'],['Registered permissions',Object.keys(PERMS).length,''],['Registered tools',TOOLS.length,'']]
+        .map(([l,v,t])=>`<div class="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
+          <dt class="text-sm text-slate-500">${l}</dt><dd class="text-sm font-semibold ${t==='ok'?'text-emerald-700':'text-slate-900'}">${v}</dd></div>`).join('')}</dl>
+      <div class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+        <p class="text-xs leading-relaxed text-slate-600">API keys and connection strings are never sent to the browser. This page reports only whether each dependency is configured, plus the model name.</p></div></div>
+    <div class="card overflow-hidden">
+      <div class="border-b border-slate-200 px-5 py-4"><h3 class="text-base font-bold text-slate-900">Permission Registry</h3>
+      <p class="text-sm text-slate-500">The shared vocabulary used by the runtime and the auditor.</p></div>
+      <div class="overflow-x-auto"><table class="w-full min-w-[700px]">
+        <thead class="bg-slate-50"><tr><th class="th">Permission</th><th class="th">Type</th><th class="th">Sensitivity</th><th class="th">Base Risk</th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+        ${Object.entries(PERMS).map(([k,p])=>`<tr>
+          <td class="td"><p class="font-mono text-xs font-bold text-slate-900">${k}</p><p class="mt-0.5 text-xs text-slate-500">${p.desc}</p></td>
+          <td class="td text-xs font-semibold">${p.type}</td><td class="td text-xs">${p.sens}</td>
+          <td class="td"><span class="rounded px-2 py-0.5 text-[11px] font-bold ${p.risk==='HIGH'?'bg-red-50 text-red-700':p.risk==='MEDIUM'?'bg-amber-50 text-amber-700':'bg-emerald-50 text-emerald-700'}">${p.risk}</span></td></tr>`).join('')}
+        </tbody></table></div></div>
+  </div>`;
+function statusCard(t,ok,v,d){ return `<div class="card p-5"><div class="flex items-center justify-between">
+  <h3 class="text-sm font-bold text-slate-900">${t}</h3>
+  <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ring-inset ${ok?'bg-emerald-50 text-emerald-700 ring-emerald-200':'bg-red-50 text-red-700 ring-red-200'}">
+    <span class="h-1.5 w-1.5 rounded-full ${ok?'bg-emerald-500':'bg-red-500'}"></span>${ok?'OK':'ATTENTION'}</span></div>
+  <p class="mt-2 font-mono text-sm text-slate-800">${v}</p><p class="mt-1.5 text-xs leading-relaxed text-slate-500">${d}</p></div>`; }
+
+render();
+</script>
+</body>
+</html>

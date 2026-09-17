@@ -1,0 +1,14 @@
+{
+  "name": "agentguard",
+  "private": true,
+  "version": "1.0.0",
+  "description": "AgentGuard - AI Agent Permission Scope Auditor",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "seed": "npm run seed --prefix backend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm:dev:backend\" \"npm:dev:frontend\""
+  },
+  "devDependencies": { "concurrently": "^9.1.0" }
+}
