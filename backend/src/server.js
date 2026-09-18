@@ -7,10 +7,9 @@ import routes from './routes/index.js';
 
 const app = express();
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }));
+app.use(cors({ origin: process.env.CORS_ORIGIN || 'https://agentguard2.vercel.app/dashboard' }));
 app.use(express.json({ limit: '1mb' }));
 app.use(morgan('dev'));
-
 app.get('/health', (_req, res) => res.json({ ok: true, service: 'agentguard-backend' }));
 app.use('/api', routes);
 
