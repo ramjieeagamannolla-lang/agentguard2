@@ -22,6 +22,8 @@ export function getLLM({ temperature = 0 } = {}) {
       apiKey,
       model: process.env.LLM_MODEL || 'gpt-4o',
       temperature,
+      maxRetries: 1,
+      timeout: 15000,
     });
   }
 
@@ -32,6 +34,8 @@ export function getLLM({ temperature = 0 } = {}) {
       // calling, which the target agent and every audit node depend on.
       model: process.env.LLM_MODEL || 'llama-3.3-70b-versatile',
       temperature,
+      maxRetries: 1,
+      timeout: 15000,
     });
   }
 
@@ -40,6 +44,8 @@ export function getLLM({ temperature = 0 } = {}) {
     model: process.env.LLM_MODEL || 'claude-sonnet-4-5',
     temperature,
     maxTokens: 2048,
+    maxRetries: 1,
+    timeout: 15000,
   });
 }
 

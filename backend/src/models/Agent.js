@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const AgentSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
+    type: { type: String, default: 'custom', trim: true },
     task: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
 

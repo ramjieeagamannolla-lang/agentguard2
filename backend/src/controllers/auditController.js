@@ -1,7 +1,7 @@
 import { Agent } from '../models/Agent.js';
 import { Audit } from '../models/Audit.js';
 import { runAudit, AUDIT_NODES } from '../ai/auditGraph.js';
-import { permissionMeta, TOOL_REGISTRY } from '../permissions/registry.js';
+import { permissionMeta, TOOL_REGISTRY, toolsForPermissions } from '../permissions/registry.js';
 
 export function graphShape(_req, res) {
   res.json({ nodes: AUDIT_NODES });
@@ -18,6 +18,7 @@ export async function createAudit(req, res, next) {
       agentName: agent.name,
       task: agent.task,
       description: agent.description,
+      actualTools: (agent.tools || []).map((toolName) => TOOL_REGISTRY[toolName]).filter(Boolean),
       actualPermissions: agent.grantedPermissions,
     });
 
@@ -86,9 +87,7 @@ export async function approveAudit(req, res, next) {
     ];
 
     agent.grantedPermissions = finalPermissions;
-    agent.tools = (agent.tools || []).filter(
-      (t) => TOOL_REGISTRY[t] && finalPermissions.includes(TOOL_REGISTRY[t].permission)
-    );
+    agent.tools = toolsForPermissions(finalPermissions).map((t) => t.toolName);
     agent.status = 'SECURED';
     agent.riskLevel = audit.recommendations.remove.length ? 'LOW' : agent.riskLevel;
     await agent.save();
@@ -101,7 +100,7 @@ export async function approveAudit(req, res, next) {
 
     res.json({
       audit: decorateAudit(audit.toObject()),
-      agent: agent.toObject(),
+      agent: decorateAgent(agent.toObject()),
       change: {
         before,
         after: finalPermissions,
@@ -156,5 +155,18 @@ function decorateAudit(audit) {
     requiredMeta: meta(audit.requiredPermissions),
     excessiveMeta: meta(audit.excessivePermissions),
     originalMeta: meta(audit.originalPermissions),
+  };
+}
+
+function decorateAgent(agent) {
+  return {
+    ...agent,
+    toolDetails: (agent.tools || []).map((t) => TOOL_REGISTRY[t]).filter(Boolean),
+    activeTools: (agent.tools || []).filter(
+      (t) => TOOL_REGISTRY[t] && (agent.grantedPermissions || []).includes(TOOL_REGISTRY[t].permission)
+    ),
+    revokedTools: (agent.tools || []).filter(
+      (t) => TOOL_REGISTRY[t] && !(agent.grantedPermissions || []).includes(TOOL_REGISTRY[t].permission)
+    ),
   };
 }

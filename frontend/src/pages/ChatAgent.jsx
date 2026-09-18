@@ -4,12 +4,76 @@ import toast from 'react-hot-toast';
 import { Agents } from '../lib/api.js';
 import { Spinner, ErrorState, RiskBadge } from '../lib/ui.jsx';
 
-const SUGGESTIONS = [
-  'What is the status of order #1024?',
-  'Who is the customer on order #1024?',
-  'Delete order 1027.',
-  'What is the salary of employee E-01?',
-];
+const SUGGESTIONS = {
+  'customer-support': [
+    'What is the status of order #1024?',
+    'Who is the customer on order #1024?',
+    'Delete order 1027.',
+  ],
+  'hr-assistant': [
+    'What is my remaining leave balance?',
+    'Show employee E-01.',
+    'What is the payroll record for employee E-01?',
+  ],
+  'finance-assistant': [
+    'What is the status of invoice INV-1001?',
+    'Show the payment for invoice INV-1002.',
+    'What is the salary of employee E-03?',
+  ],
+  'inventory-agent': [
+    'How many units of product P100 are available?',
+    'Show product P200.',
+    'Update product P200 stock to 12.',
+  ],
+  'marketing-agent': [
+    'How did our summer campaign perform?',
+    'Show the Summer Launch campaign.',
+    'Who owns campaign CMP-2026-SUMMER?',
+  ],
+  'appointment-agent': [
+    'What appointments do I have tomorrow?',
+    'What slots are available tomorrow?',
+    'Create an appointment with Sarah Chen tomorrow at 11:00 about benefits.',
+  ],
+  custom: [
+    'What is the status of order #1024?',
+    'What is my remaining leave balance?',
+    'What is the status of invoice INV-1001?',
+  ],
+};
+
+const PROBES = {
+  'customer-support': [
+    ['getOrder', { orderId: '1024' }],
+    ['deleteOrder', { orderId: '__NO_SUCH_ORDER__' }],
+    ['getPayroll', { employeeId: 'E-01' }],
+  ],
+  'hr-assistant': [
+    ['getLeaveBalance', { employeeId: 'E-01' }],
+    ['deleteEmployee', { employeeId: 'E-404' }],
+    ['getPayroll', { employeeId: 'E-01' }],
+  ],
+  'finance-assistant': [
+    ['getInvoice', { invoiceId: 'INV-1001' }],
+    ['deleteInvoice', { invoiceId: 'INV-404' }],
+    ['getEmployeeSalary', { employeeId: 'E-03' }],
+  ],
+  'inventory-agent': [
+    ['getStock', { productId: 'P100' }],
+    ['deleteProduct', { productId: 'P404' }],
+    ['updateProductPrice', { productId: 'P404', price: 119 }],
+  ],
+  'marketing-agent': [
+    ['getCampaignMetrics', { name: 'Summer Launch' }],
+    ['deleteCampaign', { campaignId: 'CMP-404' }],
+    ['getEmployeeData', { employeeId: 'E-02' }],
+  ],
+  'appointment-agent': [
+    ['getAppointment', { date: 'tomorrow', attendee: 'Sarah Chen' }],
+    ['deleteAppointment', { appointmentId: 'APT-404' }],
+    ['getAvailableSlots', { date: 'tomorrow' }],
+  ],
+};
 
 export default function ChatAgent() {
   const { id } = useParams();
@@ -65,6 +129,9 @@ export default function ChatAgent() {
   if (error) return <ErrorState error={error} />;
   if (!agent) return <div className="flex justify-center py-24 text-slate-400"><Spinner className="h-8 w-8" /></div>;
 
+  const suggestions = SUGGESTIONS[agent.type] ?? SUGGESTIONS.custom;
+  const probes = PROBES[agent.type] ?? PROBES['customer-support'];
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       {/* Chat column */}
@@ -86,7 +153,7 @@ export default function ChatAgent() {
               <p className="text-sm font-medium text-slate-600">Ask the agent something.</p>
               <p className="mt-1 text-xs text-slate-400">It will call real tools against the sandbox database.</p>
               <div className="mx-auto mt-5 flex max-w-md flex-wrap justify-center gap-2">
-                {SUGGESTIONS.map((s) => (
+                {suggestions.map((s) => (
                   <button key={s} onClick={() => send(s)}
                     className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:border-brand-300 hover:text-brand-700">
                     {s}
@@ -148,7 +215,7 @@ export default function ChatAgent() {
 
         <div className="border-t border-slate-200 p-4">
           <div className="flex gap-2">
-            <input className="input flex-1" placeholder="Ask about an order, customer, refund…"
+            <input className="input flex-1" placeholder="Ask the selected agent about its sandbox data..."
               value={input} onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && send()} disabled={busy} />
             <button className="btn-primary" onClick={() => send()} disabled={busy || !input.trim()}>Send</button>
@@ -184,15 +251,11 @@ export default function ChatAgent() {
             the backend returns 403 — proving the control is server-side, not cosmetic.
           </p>
           <div className="mt-3 space-y-2">
-            <button className="btn-ghost w-full !py-1.5 text-xs" onClick={() => probe('getOrder', { orderId: '1024' })}>
-              Probe getOrder(1024)
-            </button>
-            <button className="btn-ghost w-full !py-1.5 text-xs" onClick={() => probe('deleteOrder', { orderId: '1026' })}>
-              Probe deleteOrder(1026)
-            </button>
-            <button className="btn-ghost w-full !py-1.5 text-xs" onClick={() => probe('getPayroll', { employeeId: 'E-01' })}>
-              Probe getPayroll(E-01)
-            </button>
+            {probes.map(([toolName, args]) => (
+              <button key={toolName} className="btn-ghost w-full !py-1.5 text-xs" onClick={() => probe(toolName, args)}>
+                Probe {toolName}()
+              </button>
+            ))}
           </div>
         </div>
       </div>

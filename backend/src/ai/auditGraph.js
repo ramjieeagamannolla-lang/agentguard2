@@ -53,6 +53,7 @@ const AuditState = Annotation.Root({
   agentName: Annotation(),
   task: Annotation(),
   description: Annotation(),
+  actualTools: Annotation(),
   actualPermissions: Annotation(),
 
   requiredPermissions: Annotation(),
@@ -112,35 +113,48 @@ function traced(name, fn) {
 const taskAnalyzer = traced('taskAnalyzer', async (state) => {
   const llm = getLLM().withStructuredOutput(TaskAnalysisSchema, { name: 'task_analysis' });
 
-  const res = await llm.invoke([
-    { role: 'system', content: TASK_ANALYZER_PROMPT },
-    {
-      role: 'user',
-      content: `AGENT NAME: ${state.agentName}
+  try {
+    const res = await llm.invoke([
+      { role: 'system', content: TASK_ANALYZER_PROMPT },
+      {
+        role: 'user',
+        content: `AGENT NAME: ${state.agentName}
 STATED TASK: ${state.task}
 DESCRIPTION: ${state.description || '(none)'}
+
+ACTUAL TOOLS WIRED TO THIS AGENT:
+${(state.actualTools || []).map((t) => `- ${t.toolName} (${t.permission}): ${t.description}`).join('\n') || '(none)'}
 
 PERMISSION CATALOGUE:
 ${catalogue()}
 
 Determine the minimum required permissions for this task.`,
-    },
-  ]);
+      },
+    ]);
 
-  return {
-    requiredPermissions: res.requiredPermissions,
-    taskAnalysis: res.reasoning,
-  };
+    return {
+      requiredPermissions: res.requiredPermissions,
+      taskAnalysis: res.reasoning,
+    };
+  } catch (err) {
+    console.warn('[auditGraph] task analyzer structured output failed; using deterministic fallback:', err.message);
+    return deterministicTaskAnalysis(state);
+  }
 });
 
 const permissionAuditor = traced('permissionAuditor', async (state) => {
   const llm = getLLM().withStructuredOutput(PermissionAuditSchema, { name: 'permission_audit' });
 
-  const res = await llm.invoke([
-    { role: 'system', content: PERMISSION_AUDITOR_PROMPT },
-    {
-      role: 'user',
-      content: `TASK: ${state.task}
+  let summary;
+  try {
+    const res = await llm.invoke([
+      { role: 'system', content: PERMISSION_AUDITOR_PROMPT },
+      {
+        role: 'user',
+        content: `TASK: ${state.task}
+
+ACTUAL TOOLS:
+${(state.actualTools || []).map((t) => `- ${t.toolName} -> ${t.permission}`).join('\n') || '(none)'}
 
 REQUIRED PERMISSIONS (from Task Analyzer):
 ${state.requiredPermissions.join(', ') || '(none)'}
@@ -149,8 +163,13 @@ ACTUALLY GRANTED PERMISSIONS:
 ${state.actualPermissions.join(', ') || '(none)'}
 
 Compute excessive and missing sets, then summarize the gap.`,
-    },
-  ]);
+      },
+    ]);
+    summary = res.summary;
+  } catch (err) {
+    console.warn('[auditGraph] permission auditor structured output failed; using deterministic fallback:', err.message);
+    summary = deterministicAuditSummary(state);
+  }
 
   // Deterministic set arithmetic is authoritative here. The LLM's summary is
   // valuable prose, but we never let a model's arithmetic decide what gets
@@ -161,7 +180,7 @@ Compute excessive and missing sets, then summarize the gap.`,
   return {
     excessivePermissions: [...actual].filter((p) => !required.has(p)),
     missingPermissions: [...required].filter((p) => !actual.has(p)),
-    auditSummary: res.summary,
+    auditSummary: summary,
   };
 });
 
@@ -182,31 +201,38 @@ const riskAnalyzer = traced('riskAnalyzer', async (state) => {
     })
     .join('\n');
 
-  const res = await llm.invoke([
-    { role: 'system', content: RISK_ANALYZER_PROMPT },
-    {
-      role: 'user',
-      content: `AGENT: ${state.agentName}
+  try {
+    const res = await llm.invoke([
+      { role: 'system', content: RISK_ANALYZER_PROMPT },
+      {
+        role: 'user',
+        content: `AGENT: ${state.agentName}
 TASK: ${state.task}
 
 EXCESSIVE PERMISSIONS AND THEIR METADATA:
 ${meta}
 
 Assess the concrete risk of each, then assign an overall risk level.`,
-    },
-  ]);
+      },
+    ]);
 
-  return { riskLevel: res.riskLevel, riskReasons: res.risks };
+    return { riskLevel: res.riskLevel, riskReasons: res.risks };
+  } catch (err) {
+    console.warn('[auditGraph] risk analyzer structured output failed; using deterministic fallback:', err.message);
+    return deterministicRisk(state);
+  }
 });
 
 const recommendationAgent = traced('recommendationAgent', async (state) => {
   const llm = getLLM().withStructuredOutput(RecommendationSchema, { name: 'recommendation' });
 
-  const res = await llm.invoke([
-    { role: 'system', content: RECOMMENDATION_PROMPT },
-    {
-      role: 'user',
-      content: `AGENT: ${state.agentName}
+  let rationale;
+  try {
+    const res = await llm.invoke([
+      { role: 'system', content: RECOMMENDATION_PROMPT },
+      {
+        role: 'user',
+        content: `AGENT: ${state.agentName}
 TASK: ${state.task}
 GRANTED: ${state.actualPermissions.join(', ') || '(none)'}
 REQUIRED: ${state.requiredPermissions.join(', ') || '(none)'}
@@ -215,8 +241,13 @@ MISSING: ${state.missingPermissions.join(', ') || '(none)'}
 RISK LEVEL: ${state.riskLevel}
 
 Produce the least-privilege recommendation and a rationale for a human approver.`,
-    },
-  ]);
+      },
+    ]);
+    rationale = res.rationale;
+  } catch (err) {
+    console.warn('[auditGraph] recommendation structured output failed; using deterministic fallback:', err.message);
+    rationale = deterministicRationale(state);
+  }
 
   // Again: the sets we will actually act on are computed, not generated.
   const required = new Set(state.requiredPermissions);
@@ -225,10 +256,71 @@ Produce the least-privilege recommendation and a rationale for a human approver.
       keep: state.actualPermissions.filter((p) => required.has(p)),
       remove: state.excessivePermissions,
       add: state.missingPermissions,
-      rationale: res.rationale,
+      rationale,
     },
   };
 });
+
+function deterministicTaskAnalysis(state) {
+  const text = `${state.agentName || ''} ${state.task || ''} ${state.description || ''}`.toLowerCase();
+  const required = [];
+
+  addIf(text, required, ['order', 'customer', 'shipping', 'delivery'], ['READ_ORDERS', 'READ_CUSTOMER']);
+  addIf(text, required, ['employee', 'leave', 'payroll', 'hr'], ['READ_EMPLOYEE', 'READ_LEAVE', 'READ_PAYROLL']);
+  addIf(text, required, ['invoice', 'payment', 'finance'], ['READ_INVOICES', 'READ_PAYMENTS']);
+  addIf(text, required, ['product', 'stock', 'inventory'], ['READ_PRODUCTS', 'READ_STOCK']);
+  addIf(text, required, ['campaign', 'marketing'], ['READ_CAMPAIGNS', 'READ_CAMPAIGN_METRICS']);
+  addIf(text, required, ['appointment', 'schedule', 'slot'], ['READ_APPOINTMENTS', 'READ_SLOTS']);
+
+  const actual = new Set(state.actualPermissions || []);
+  const available = new Set(Object.keys(PERMISSIONS));
+  const requiredPermissions = [...new Set(required)].filter((p) => available.has(p) && (actual.has(p) || p.startsWith('READ_')));
+
+  return {
+    requiredPermissions,
+    taskAnalysis: `Deterministic fallback inferred the minimum read-only scope from the stated task: ${requiredPermissions.join(', ') || 'none'}.`,
+  };
+}
+
+function deterministicAuditSummary(state) {
+  return `Deterministic fallback compared required permissions with the agent's granted permissions for "${state.task}".`;
+}
+
+function deterministicRisk(state) {
+  const riskReasons = (state.excessivePermissions || []).map((permission) => {
+    const meta = permissionMeta(permission);
+    return {
+      permission,
+      severity: meta.risk === 'HIGH' ? 'HIGH' : meta.risk === 'MEDIUM' ? 'MEDIUM' : 'LOW',
+      reason: `${permission} is not required for "${state.task}" but would allow ${meta.description.toLowerCase()}`,
+    };
+  });
+
+  const riskLevel = riskReasons.some((r) => r.severity === 'HIGH')
+    ? 'HIGH'
+    : riskReasons.some((r) => r.severity === 'MEDIUM')
+      ? 'MEDIUM'
+      : 'LOW';
+
+  return { riskLevel, riskReasons };
+}
+
+function addIf(text, target, keywords, permissions) {
+  if (keywords.some((word) => text.includes(word))) target.push(...permissions);
+}
+
+function deterministicRationale(state) {
+  const removed = state.excessivePermissions?.length
+    ? `Remove ${state.excessivePermissions.join(', ')} because the stated task does not require them.`
+    : 'No permissions need to be removed.';
+  const added = state.missingPermissions?.length
+    ? ` Add ${state.missingPermissions.join(', ')} because they are required for the stated task.`
+    : '';
+  const kept = state.requiredPermissions?.length
+    ? ` Keep ${state.requiredPermissions.join(', ')} as the least-privilege operating scope.`
+    : ' Keep no permissions unless the task is expanded.';
+  return `${removed}${added}${kept}`;
+}
 
 /* ---------------------------------------------------------------- *
  * Graph assembly
@@ -260,11 +352,12 @@ const workflow = new StateGraph(AuditState)
 
 export const auditGraph = workflow.compile();
 
-export async function runAudit({ agentName, task, description, actualPermissions }) {
+export async function runAudit({ agentName, task, description, actualTools, actualPermissions }) {
   return auditGraph.invoke({
     agentName,
     task,
     description,
+    actualTools,
     actualPermissions,
   });
 }

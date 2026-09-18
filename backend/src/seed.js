@@ -1,11 +1,24 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import { connectDB } from './config/db.js';
-import { Order, Customer, Employee, Inventory } from './models/sandbox.js';
+import {
+  Order,
+  Customer,
+  Employee,
+  Inventory,
+  Invoice,
+  Payment,
+  Product,
+  Campaign,
+  CampaignMetric,
+  Appointment,
+  AvailableSlot,
+} from './models/sandbox.js';
 import { Agent } from './models/Agent.js';
 import { Audit } from './models/Audit.js';
 import { ToolCallLog } from './models/ToolCallLog.js';
 import { permissionsForTools } from './permissions/registry.js';
+import { AGENT_TEMPLATES } from './agents/templates.js';
 
 const customers = [
   { customerId: 'C-100', name: 'John Mathews', email: 'john.m@example.com', phone: '+1-555-0100', address: '14 Oak Street, Austin, TX', tier: 'Gold' },
@@ -37,9 +50,24 @@ const orders = [
 ];
 
 const employees = [
-  { employeeId: 'E-01', name: 'Sarah Chen', role: 'Engineering Manager', department: 'Engineering', salary: 168000, bankAccount: 'XXXX-XXXX-4412' },
-  { employeeId: 'E-02', name: 'Marcus Webb', role: 'Support Lead', department: 'Customer Success', salary: 94000, bankAccount: 'XXXX-XXXX-9087' },
-  { employeeId: 'E-03', name: 'Aisha Rahman', role: 'Financial Analyst', department: 'Finance', salary: 112000, bankAccount: 'XXXX-XXXX-2231' },
+  {
+    employeeId: 'E-01', name: 'Sarah Chen', email: 'sarah.chen@example.test',
+    role: 'Engineering Manager', department: 'Engineering', manager: 'Dana Lee',
+    leaveBalance: 12, plannedLeave: ['2026-10-07', '2026-10-08'],
+    salary: 168000, bankAccount: 'XXXX-XXXX-4412', payCycle: 'Semi-monthly',
+  },
+  {
+    employeeId: 'E-02', name: 'Marcus Webb', email: 'marcus.webb@example.test',
+    role: 'Support Lead', department: 'Customer Success', manager: 'Nora Patel',
+    leaveBalance: 7, plannedLeave: ['2026-11-21'],
+    salary: 94000, bankAccount: 'XXXX-XXXX-9087', payCycle: 'Semi-monthly',
+  },
+  {
+    employeeId: 'E-03', name: 'Aisha Rahman', email: 'aisha.rahman@example.test',
+    role: 'Financial Analyst', department: 'Finance', manager: 'Riley Chen',
+    leaveBalance: 15, plannedLeave: [],
+    salary: 112000, bankAccount: 'XXXX-XXXX-2231', payCycle: 'Semi-monthly',
+  },
 ];
 
 const inventory = [
@@ -48,26 +76,51 @@ const inventory = [
   { sku: 'SKU-31', name: '27" 4K Monitor', stock: 0, warehouse: 'WH-EAST' },
 ];
 
-const demoAgents = [
-  {
-    name: 'Customer Support Agent',
-    task: 'Answer customer questions about orders, shipping and delivery.',
-    description: 'Front-line support agent embedded in the help widget.',
-    tools: ['getOrder', 'getCustomer', 'updateOrder', 'deleteOrder', 'getPayroll'],
-  },
-  {
-    name: 'HR Assistant',
-    task: 'Help employees find information about their payroll and compensation.',
-    description: 'Internal HR helpdesk assistant.',
-    tools: ['getPayroll', 'getCustomer'],
-  },
-  {
-    name: 'Inventory Assistant',
-    task: 'Report current stock levels for products to the warehouse team.',
-    description: 'Warehouse-facing stock lookup agent.',
-    tools: ['getInventory'],
-  },
+const invoices = [
+  { invoiceId: 'INV-1001', customerId: 'C-100', status: 'Open', amount: 249, dueDate: '2026-09-30', notes: 'Awaiting payment.' },
+  { invoiceId: 'INV-1002', customerId: 'C-101', status: 'Paid', amount: 258, dueDate: '2026-09-10', notes: 'Paid in full.' },
 ];
+
+const payments = [
+  { paymentId: 'PAY-9001', invoiceId: 'INV-1001', status: 'Pending', amount: 249, paidAt: '', method: 'ACH' },
+  { paymentId: 'PAY-9002', invoiceId: 'INV-1002', status: 'Settled', amount: 258, paidAt: '2026-09-08', method: 'Card' },
+];
+
+const products = [
+  { productId: 'P100', name: 'Noise Cancelling Headphones', category: 'Audio', price: 249, stock: 42, warehouse: 'WH-EAST' },
+  { productId: 'P200', name: 'Mechanical Keyboard', category: 'Accessories', price: 129, stock: 8, warehouse: 'WH-WEST' },
+  { productId: 'P300', name: '27 Inch 4K Monitor', category: 'Displays', price: 399, stock: 0, warehouse: 'WH-EAST' },
+];
+
+const campaigns = [
+  { campaignId: 'CMP-2026-SUMMER', name: 'Summer Launch', channel: 'Email + Paid Social', status: 'Completed', budget: 18000, ownerEmployeeId: 'E-02', notes: 'Seasonal acquisition push.' },
+  { campaignId: 'CMP-2026-FALL', name: 'Fall Retention', channel: 'Email', status: 'Planning', budget: 9000, ownerEmployeeId: 'E-01', notes: 'Loyalty nurture campaign.' },
+];
+
+const campaignMetrics = [
+  { campaignId: 'CMP-2026-SUMMER', impressions: 240000, clicks: 15600, conversions: 820, spend: 17650, revenue: 68400 },
+  { campaignId: 'CMP-2026-FALL', impressions: 0, clicks: 0, conversions: 0, spend: 0, revenue: 0 },
+];
+
+const today = new Date();
+const tomorrow = new Date(today);
+tomorrow.setDate(today.getDate() + 1);
+const todayIso = today.toISOString().slice(0, 10);
+const tomorrowIso = tomorrow.toISOString().slice(0, 10);
+
+const appointments = [
+  { appointmentId: 'APT-1001', attendee: 'Sarah Chen', date: todayIso, time: '10:00', topic: 'Project sync', status: 'Scheduled' },
+  { appointmentId: 'APT-1002', attendee: 'Sarah Chen', date: tomorrowIso, time: '14:30', topic: 'Benefits review', status: 'Scheduled' },
+  { appointmentId: 'APT-1003', attendee: 'Marcus Webb', date: tomorrowIso, time: '09:00', topic: 'Support staffing', status: 'Scheduled' },
+];
+
+const availableSlots = [
+  { slotId: 'SLOT-1', date: todayIso, time: '15:00', provider: 'HR Desk' },
+  { slotId: 'SLOT-2', date: tomorrowIso, time: '11:00', provider: 'HR Desk' },
+  { slotId: 'SLOT-3', date: tomorrowIso, time: '16:00', provider: 'Finance Desk' },
+];
+
+const demoAgents = [AGENT_TEMPLATES[0]];
 
 async function run() {
   await connectDB();
@@ -77,12 +130,22 @@ async function run() {
   await Promise.all([
     Order.deleteMany({}), Customer.deleteMany({}),
     Employee.deleteMany({}), Inventory.deleteMany({}),
+    Invoice.deleteMany({}), Payment.deleteMany({}),
+    Product.deleteMany({}), Campaign.deleteMany({}), CampaignMetric.deleteMany({}),
+    Appointment.deleteMany({}), AvailableSlot.deleteMany({}),
   ]);
   await Order.insertMany(orders);
   await Customer.insertMany(customers);
   await Employee.insertMany(employees);
   await Inventory.insertMany(inventory);
-  console.log('[seed] sandbox data loaded (orders, customers, employees, inventory)');
+  await Invoice.insertMany(invoices);
+  await Payment.insertMany(payments);
+  await Product.insertMany(products);
+  await Campaign.insertMany(campaigns);
+  await CampaignMetric.insertMany(campaignMetrics);
+  await Appointment.insertMany(appointments);
+  await AvailableSlot.insertMany(availableSlots);
+  console.log('[seed] sandbox data loaded for support, HR, finance, inventory, marketing and appointments');
 
   if (reset) {
     await Promise.all([Agent.deleteMany({}), Audit.deleteMany({}), ToolCallLog.deleteMany({})]);
@@ -94,6 +157,7 @@ async function run() {
       const permissions = permissionsForTools(a.tools);
       await Agent.create({
         ...a,
+        type: a.type,
         grantedPermissions: permissions,
         originalPermissions: permissions,
         status: 'UNAUDITED',

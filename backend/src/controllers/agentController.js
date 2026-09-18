@@ -3,15 +3,32 @@ import { Audit } from '../models/Audit.js';
 import { ToolCallLog } from '../models/ToolCallLog.js';
 import { TOOL_REGISTRY, permissionsForTools, ALL_TOOLS } from '../permissions/registry.js';
 import { runTargetAgent } from '../agents/targetAgent.js';
+import { AGENT_TEMPLATES, templateByType } from '../agents/templates.js';
 import { executeTool, PermissionDeniedError } from '../tools/enforcement.js';
 
 export async function listTools(_req, res) {
   res.json({ tools: ALL_TOOLS });
 }
 
+export async function listTemplates(_req, res) {
+  res.json({
+    templates: AGENT_TEMPLATES.map((template) => ({
+      ...template,
+      permissions: permissionsForTools(template.tools),
+      toolDetails: template.tools.map((toolName) => TOOL_REGISTRY[toolName]).filter(Boolean),
+    })),
+  });
+}
+
 export async function createAgent(req, res, next) {
   try {
-    const { name, task, description = '', tools = [] } = req.body;
+    const template = req.body?.type ? templateByType(req.body.type) : null;
+    if (req.body?.type && !template) {
+      return res.status(400).json({ error: `Unknown agent template: ${req.body.type}` });
+    }
+
+    const source = template ?? req.body;
+    const { name, task, description = '', tools = [] } = source;
 
     if (!name?.trim() || !task?.trim()) {
       return res.status(400).json({ error: 'name and task are required.' });
@@ -24,6 +41,7 @@ export async function createAgent(req, res, next) {
     const permissions = permissionsForTools(tools);
 
     const agent = await Agent.create({
+      type: source.type || req.body?.type || 'custom',
       name: name.trim(),
       task: task.trim(),
       description,

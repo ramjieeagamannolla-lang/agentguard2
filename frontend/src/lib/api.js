@@ -34,4 +34,5 @@ export const System = {
   stats: () => api.get('/dashboard/stats').then((r) => r.data),
   status: () => api.get('/system/status').then((r) => r.data),
   tools: () => api.get('/tools').then((r) => r.data.tools),
+  templates: () => api.get('/agent-templates').then((r) => r.data.templates),
 };

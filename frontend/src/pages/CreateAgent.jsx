@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Agents, System } from '../lib/api.js';
@@ -10,47 +10,39 @@ const RISK_TONE = {
   LOW: 'text-emerald-700 bg-emerald-50 border-emerald-200',
 };
 
-const PRESET = {
-  name: 'Customer Support Agent',
-  task: 'Answer customer questions about orders, shipping and delivery.',
-  description: 'Front-line support agent embedded in the help widget.',
-  tools: ['getOrder', 'getCustomer', 'updateOrder', 'deleteOrder', 'getPayroll'],
-};
-
 export default function CreateAgent() {
   const nav = useNavigate();
-  const [tools, setTools] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ name: '', task: '', description: '', tools: [] });
+  const [creating, setCreating] = useState(null);
+  const [selectedType, setSelectedType] = useState(null);
 
   useEffect(() => {
-    System.tools().then(setTools).catch((e) => setError(e.message)).finally(() => setLoading(false));
+    System.templates()
+      .then((items) => {
+        setTemplates(items);
+        setSelectedType(items[0]?.type ?? null);
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => setLoading(false));
   }, []);
 
-  const toggle = (name) =>
-    setForm((f) => ({
-      ...f,
-      tools: f.tools.includes(name) ? f.tools.filter((t) => t !== name) : [...f.tools, name],
-    }));
+  const selected = useMemo(
+    () => templates.find((template) => template.type === selectedType) ?? templates[0],
+    [templates, selectedType]
+  );
 
-  const permissions = [...new Set(form.tools.map((t) => tools.find((x) => x.toolName === t)?.permission).filter(Boolean))];
-
-  async function submit(e) {
-    e.preventDefault();
-    if (!form.name.trim() || !form.task.trim()) return toast.error('Name and task are required.');
-    if (!form.tools.length) return toast.error('Select at least one tool.');
-
-    setSaving(true);
+  async function create(template) {
+    setCreating(template.type);
     try {
-      const agent = await Agents.create(form);
+      const agent = await Agents.create({ type: template.type });
       toast.success(`${agent.name} created and ready to chat.`);
       nav(`/agents/${agent._id}`);
     } catch (err) {
       toast.error(err.message);
     } finally {
-      setSaving(false);
+      setCreating(null);
     }
   }
 
@@ -58,109 +50,106 @@ export default function CreateAgent() {
   if (error) return <ErrorState error={error} />;
 
   return (
-    <form onSubmit={submit} className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div className="space-y-6 lg:col-span-2">
-        <div className="card p-6">
-          <div className="mb-5 flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-base font-bold text-slate-900">Agent Identity</h2>
-              <p className="text-sm text-slate-500">What the agent is called and what it is for.</p>
-            </div>
-            <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setForm(PRESET)}>
-              Load demo preset
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="label">Agent Name</label>
-              <input className="input" placeholder="Customer Support Agent"
-                value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-            </div>
-            <div>
-              <label className="label">Purpose / Task</label>
-              <textarea className="input min-h-[92px] resize-y"
-                placeholder="Answer customer questions about orders, shipping and delivery."
-                value={form.task} onChange={(e) => setForm({ ...form, task: e.target.value })} />
-              <p className="mt-1.5 text-xs text-slate-500">
-                Be precise. AgentGuard derives the minimum required permissions from this sentence.
-              </p>
-            </div>
-            <div>
-              <label className="label">Description <span className="font-normal text-slate-400">(optional)</span></label>
-              <input className="input" placeholder="Where this agent is deployed."
-                value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-6">
-          <h2 className="text-base font-bold text-slate-900">Select Tools / Permissions</h2>
-          <p className="mb-5 text-sm text-slate-500">
-            Each tool grants exactly one permission. The backend enforces these at execution time.
-          </p>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {tools.map((t) => {
-              const checked = form.tools.includes(t.toolName);
-              return (
-                <label key={t.toolName}
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
-                    checked ? 'border-brand-500 bg-brand-50/50 ring-1 ring-brand-500/20' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                  }`}>
-                  <input type="checkbox" checked={checked} onChange={() => toggle(t.toolName)}
-                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-500" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-slate-900">{t.label}</p>
-                      <span className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${RISK_TONE[t.risk]}`}>{t.risk}</span>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {templates.map((template) => {
+            const active = template.type === selected?.type;
+            const busy = creating === template.type;
+            return (
+              <div
+                key={template.type}
+                onClick={() => setSelectedType(template.type)}
+                onKeyDown={(e) => e.key === 'Enter' && setSelectedType(template.type)}
+                role="button"
+                tabIndex={0}
+                className={`card flex min-h-[218px] flex-col p-5 text-left transition ${
+                  active ? 'border-brand-500 ring-1 ring-brand-500/20' : 'hover:border-slate-300'
+                }`}
+              >
+                <div className="flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h2 className="text-base font-bold text-slate-900">{template.name}</h2>
+                      <p className="mt-1 text-sm font-medium text-slate-500">{template.summary}</p>
                     </div>
-                    <p className="mt-0.5 font-mono text-[11px] font-semibold text-brand-700">{t.permission}</p>
-                    <p className="mt-1.5 text-xs leading-relaxed text-slate-500">{t.description}</p>
+                    <span className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-500">
+                      {template.tools.length} tools
+                    </span>
                   </div>
-                </label>
-              );
-            })}
-          </div>
+                  <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-slate-600">{template.task}</p>
+                </div>
+
+                <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                  <span className="text-xs font-semibold text-slate-400">{template.permissions.length} permissions</span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      create(template);
+                    }}
+                    className="btn-primary !px-3 !py-1.5 text-xs"
+                    disabled={Boolean(creating)}
+                  >
+                    {busy ? <><Spinner className="h-3.5 w-3.5" /> Creating...</> : 'Create Agent'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div className="lg:col-span-1">
         <div className="card sticky top-28 p-6">
-          <h3 className="text-base font-bold text-slate-900">Summary</h3>
+          {selected ? (
+            <>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Selected Template</p>
+              <h3 className="mt-1 text-base font-bold text-slate-900">{selected.name}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{selected.description}</p>
 
-          <dl className="mt-4 space-y-3 text-sm">
-            <div className="flex justify-between gap-3">
-              <dt className="text-slate-500">Tools selected</dt>
-              <dd className="font-semibold text-slate-900">{form.tools.length}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-slate-500">Permissions granted</dt>
-              <dd className="font-semibold text-slate-900">{permissions.length}</dd>
-            </div>
-          </dl>
+              <dl className="mt-5 space-y-3 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-slate-500">Tools wired</dt>
+                  <dd className="font-semibold text-slate-900">{selected.tools.length}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-slate-500">Permissions granted</dt>
+                  <dd className="font-semibold text-slate-900">{selected.permissions.length}</dd>
+                </div>
+              </dl>
 
-          {permissions.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {permissions.map((p) => (
-                <span key={p} className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[11px] font-semibold text-slate-700">{p}</span>
-              ))}
-            </div>
+              <div className="mt-5 space-y-2">
+                {selected.toolDetails.map((tool) => (
+                  <div key={tool.toolName} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-slate-900">{tool.toolName}()</p>
+                        <p className="mt-0.5 font-mono text-[11px] font-semibold text-brand-700">{tool.permission}</p>
+                      </div>
+                      <span className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${RISK_TONE[tool.risk]}`}>
+                        {tool.risk}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="btn-primary mt-5 w-full"
+                onClick={() => create(selected)}
+                disabled={Boolean(creating)}
+              >
+                {creating === selected.type ? <><Spinner className="h-4 w-4" /> Creating...</> : 'Create Agent'}
+              </button>
+              <button type="button" className="btn-ghost mt-2 w-full" onClick={() => nav('/dashboard')}>Cancel</button>
+            </>
+          ) : (
+            <p className="text-sm text-slate-500">No templates are available.</p>
           )}
-
-          <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs leading-relaxed text-slate-600">
-              Over-granting on purpose is fine here — that is the point of the demo.
-              AgentGuard will flag anything the stated task does not need.
-            </p>
-          </div>
-
-          <button type="submit" className="btn-primary mt-5 w-full" disabled={saving}>
-            {saving ? <><Spinner className="h-4 w-4" /> Creating…</> : 'Create Agent'}
-          </button>
-          <button type="button" className="btn-ghost mt-2 w-full" onClick={() => nav('/dashboard')}>Cancel</button>
         </div>
       </div>
-    </form>
+    </div>
   );
 }

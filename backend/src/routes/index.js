@@ -7,6 +7,7 @@ const router = Router();
 
 // Tools / registry
 router.get('/tools', agents.listTools);
+router.get('/agent-templates', agents.listTemplates);
 
 // Agents
 router.post('/agents', agents.createAgent);
