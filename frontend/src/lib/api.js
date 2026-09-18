@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-export const api = axios.create({ baseURL: '/api', timeout: 120000 });
+// export const api = axios.create({ baseURL: '/api', timeout: 120000 });
+export const api = axios.create({
+  baseURL: "https://agentguard2-1.onrender.com/api",
+  timeout: 120000,
+});
 
 api.interceptors.response.use(
   (r) => r,
